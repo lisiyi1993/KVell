@@ -70,7 +70,7 @@ int injector_process_queue(struct injector_queue *_q) {
 
       while(cb) {
          struct slab_callback *next = cb->next;
-         //void *item = cb->returned_item;
+         // void *item = cb->returned_item;
          if(cb->cb)
             check_races_and_call(cb, cb->returned_item);
          //if(item && (SAFE_INJECTOR_QUEUES || TRANSACTION_TYPE == TRANS_LONG))

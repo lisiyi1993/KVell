@@ -7,8 +7,8 @@
 
 
 #define TRANSACTION_OBJECT_SIZE 512
-#define PATH "/scratch%lu/kvell/slab-%d-%lu"   // path where data is store -- disk, worker_id, item_size
-#define PATH_TRANSACTIONS "/scratch%lu/kvell/trans-%d-%lu" // path where the transaction log is store -- disk, worker_id, transaction_size
+#define PATH "/data/sli144/scratch%lu/kvell/slab-%d-%lu"   // path where data is store -- disk, worker_id, item_size
+#define PATH_TRANSACTIONS "/data/sli144/scratch%lu/kvell/trans-%d-%lu" // path where the transaction log is store -- disk, worker_id, transaction_size
 
 /* Which transaction type are we using? */
 #define TRANS_SNAPSHOT 0
@@ -31,9 +31,9 @@
 #endif
 
 /* Page cache */
-/*#define PAGE_CACHE_SIZE (PAGE_SIZE * 20480)*/
+#define PAGE_CACHE_SIZE (PAGE_SIZE * 20480)
 /*#define PAGE_CACHE_SIZE (PAGE_SIZE * 7864320) //30GB*/
-#define PAGE_CACHE_SIZE (PAGE_SIZE * 5242880) //20GB
+/*#define PAGE_CACHE_SIZE (PAGE_SIZE * 5242880) //20GB*/
 //#define PAGE_CACHE_SIZE (PAGE_SIZE * 786432) //3GB
 #define MAX_PAGE_CACHE (PAGE_CACHE_SIZE / PAGE_SIZE)
 

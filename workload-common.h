@@ -33,6 +33,7 @@ typedef enum available_bench {
    scan_b_zipfian,
    scan_c_zipfian,
    scan_d_zipfian,
+   sql_parser,
    prod1,
    prod2,
    tpcc,
@@ -54,6 +55,7 @@ extern struct workload_api TPCC;
 extern struct workload_api TPCH;
 extern struct workload_api TPCCH;
 extern struct workload_api SCAN;
+extern struct workload_api SQL_PARSER;
 
 struct workload {
    struct workload_api *api;
@@ -83,6 +85,7 @@ struct slab_callback *bench_cb(void);
 
 struct workload_api *get_api(bench_t b);
 
+size_t get_db_size_sql_parser(void);
 size_t get_db_size_tpcc(void);
 size_t get_db_size_tpch(void);
 size_t get_db_size_tpcch(void);

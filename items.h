@@ -70,6 +70,7 @@ char *add_shash_uint(char *old_item, int column, uint64_t value, int free_item);
 char *incr_shash_uint(char *old_item, int column, uint64_t amount);
 char *add_shash_float(char *old_item, int column, float value, int free_item);
 char *add_shash_string(char *old_item, int column, size_t min_value, size_t max_value, int free_item);
+char *add_shash_specific_string(char *old_item, int column, char *value, int free_item);
 char *create_shash(uint64_t uid);
 void dump_shash(char *item);
 

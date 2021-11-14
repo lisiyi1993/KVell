@@ -290,7 +290,7 @@ void bench_zipf(void) {
 }
 
 int main(int argc, char **argv) {
-   path = "/scratch0/blepers/slab-0-0-0-1024";
+   path = "/data/sli144/scratch0/blepers/slab-0-0-0-1024";
    srand(time(NULL));
    bench_io();
    //bench_data_structures();

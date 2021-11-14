@@ -281,6 +281,10 @@ char *add_shash_string(char *old_item, int column, size_t min_value, size_t max_
    return add_shash_element(old_item, column, _random_string, len+1, free_item);
 }
 
+char *add_shash_specific_string(char *old_item, int column, char *value, int free_item) {
+   return add_shash_element(old_item, column, value, strlen(value)+1, free_item);
+}
+
 char *create_shash(uint64_t uid) {
    struct shash s = { .nb_elements = 0 };
    return _create_unique_item(uid, &s, sizeof(s));

@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "headers.h": "c",
+        "cmath": "cpp",
+        "functional": "cpp",
+        "math.h": "c",
+        "workload-sql-parser.h": "c",
+        "algorithm": "c",
+        "sstream": "c",
+        "random": "c",
+        "array": "c",
+        "*.tcc": "c",
+        "memory": "c",
+        "istream": "c",
+        "tuple": "c",
+        "utility": "c"
+    }
+}

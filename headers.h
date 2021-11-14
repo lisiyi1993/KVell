@@ -40,5 +40,6 @@
 #include "gc.h"
 
 #include "workload-common.h"
+#include "workload-sql-parser.h"
 
 #endif
