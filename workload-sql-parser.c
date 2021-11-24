@@ -47,6 +47,7 @@ long sql_parser_get_key_lineitem(long linenumber) {
 }
 
 bool compare_value(void *item_value, void *expected_value, operator_t operator, data_type type) {
+   int reti;
    switch (operator)
    {
    case Eq:
@@ -76,6 +77,15 @@ bool compare_value(void *item_value, void *expected_value, operator_t operator, 
       break;
    case Ne:
       return item_value != expected_value;
+      break;
+   case Like:
+      reti = regexec(&(((like_condition_t *) expected_value)->regex), (char *) item_value, 0, NULL, 0);
+      if (reti == 0) {
+         return true;
+      }
+      else {
+         return false;
+      }
       break;
    default:
       return false;
@@ -180,7 +190,7 @@ static char *create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "LINESTATUS", "2");
       }
       else {
-         item = add_column_value(item, "SHIPDATE", "1998-09-05");
+         item = add_column_value(item, "SHIPDATE", "1998-11-05");
          item = add_column_value(item, "RETURNFLAG", "C");
          item = add_column_value(item, "LINESTATUS", "3");
       }
@@ -379,8 +389,6 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       // item pass the conditions check
       char *key_string = get_column_string_value(item, "LINENUMBER");
 
-      printf("key %s: %d \n", key_string, valid_conds);
-
       field_node_t* current_field = query->field_ptr;
       char *value = malloc(1024);
       while (current_field != NULL)
@@ -510,26 +518,60 @@ typedef enum state
 	stepSelectFromTable,
 	stepWhere,
 	stepWhereField,
+   stepWhereAndField,
+   stepWhereOrField,
 	stepWhereOperator,
 	stepWhereValue,
+	stepWhereLikeValue,
 	stepWhereAnd,
+	stepWhereOr
 } state_t;
+
+void str_replace(char *target, const char *needle, const char *replacement)
+{
+    char buffer[1024] = { 0 };
+    char *insert_point = &buffer[0];
+    const char *tmp = target;
+    size_t needle_len = strlen(needle);
+    size_t repl_len = strlen(replacement);
+
+    while (1) {
+        const char *p = strstr(tmp, needle);
+
+        // walked past last occurrence of needle; copy remaining part
+        if (p == NULL) {
+            strcpy(insert_point, tmp);
+            break;
+        }
+
+        // copy part before needle
+        memcpy(insert_point, tmp, p - tmp);
+        insert_point += p - tmp;
+
+        // copy replacement string
+        memcpy(insert_point, replacement, repl_len);
+        insert_point += repl_len;
+
+        // adjust pointers, move on
+        tmp = p + needle_len;
+    }
+
+    // write altered string back to target
+    strcpy(target, buffer);
+}
 
 query_t* parse_sql(char *input_sql) {
    char delim[] = " ";
    char* ptr = strtok(input_sql, delim);
 
-	query_t *query = (query_t *) malloc(sizeof(query_t));
+	query_t *query = (query_t *) calloc(1, sizeof(query_t));
 	state_t step = stepType;
 	field_node_t *current_field_ptr = NULL;
-
-   query->condition_ptr = NULL;
-   query->and_condition_ptr = NULL;
-   query->or_condition_ptr = NULL;
 
 	condition_t *current_condition_ptr = NULL;
 	condition_t *current_and_condition_ptr = NULL;
 	condition_t *current_or_condition_ptr = NULL;
+	like_condition_t *curent_like_condition = NULL;
 
 	while (ptr != NULL)
     {
@@ -541,7 +583,7 @@ query_t* parse_sql(char *input_sql) {
 				query->type = SELECT;
 				step = stepSelectField;
 
-				query->field_ptr = (field_node_t *) malloc(sizeof(field_node_t));
+				query->field_ptr = (field_node_t *) calloc(1, sizeof(field_node_t));
 				current_field_ptr = query->field_ptr;
 			}
 
@@ -565,7 +607,7 @@ query_t* parse_sql(char *input_sql) {
 			break;
 
 		case stepSelectComma:
-			current_field_ptr->next = (field_node_t *) malloc(sizeof(field_node_t));
+			current_field_ptr->next = (field_node_t *) calloc(1, sizeof(field_node_t));
 			current_field_ptr = current_field_ptr->next;
 
 			step = stepSelectField;
@@ -593,7 +635,7 @@ query_t* parse_sql(char *input_sql) {
 
 			if (query->condition_ptr == NULL) 
 			{
-				query->condition_ptr = (condition_t *) malloc(sizeof(condition_t));
+				query->condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
 				current_condition_ptr = query->condition_ptr;
 			}
 			
@@ -609,6 +651,14 @@ query_t* parse_sql(char *input_sql) {
 			break;
 
 		case stepWhereOperator:
+			if (strcmp(ptr, "LIKE") == 0) 
+			{
+				current_condition_ptr->operator = Like;
+				ptr = strtok(NULL, delim);
+				step = stepWhereLikeValue;
+				break;
+			}
+
 			if (strcmp(ptr, "=") == 0) 
 			{
 				current_condition_ptr->operator = Eq;
@@ -638,49 +688,95 @@ query_t* parse_sql(char *input_sql) {
 			step = stepWhereValue;
 			break;
 
-		case stepWhereValue:
-			current_condition_ptr->operand2 = ptr;
+		case stepWhereLikeValue:
+
+			curent_like_condition = (like_condition_t *) malloc(sizeof(like_condition_t));
+
+			curent_like_condition->ex = ptr;
+
+			char *required_ex = malloc(strlen(ptr));
+			strcpy(required_ex, ptr);
+			required_ex[0] = '^';
+			required_ex[strlen(required_ex) - 1] = '$';
+
+			str_replace(required_ex, "%", ".*");
+
+			regcomp(&(curent_like_condition->regex), required_ex, 0);
+
+			// int reti = regexec(&(curent_like_condition->regex), "abc", 0, NULL, 0);
+			// if (reti == 0) {
+			// 	printf("MATCH \n");
+			// }
+			// else {
+			// 	printf("NOT MATCH \n");
+			// }
+
+			current_condition_ptr->operand2 = curent_like_condition;
 			current_condition_ptr->operand2_is_field = true;
-			// current_condition_ptr->next_condition = malloc(sizeof(condition_t));
-			// current_condition_ptr = current_condition_ptr->next_condition;
 
 			ptr = strtok(NULL, delim);
 			if (ptr != NULL) {
 				if (strcmp(ptr, "AND") == 0) 
 				{
-					if (current_and_condition_ptr == NULL)
-					{
-						query->and_condition_ptr = (condition_t *) malloc(sizeof(condition_t));
-						current_and_condition_ptr = query->and_condition_ptr;
-					}
-					else 
-					{
-						current_and_condition_ptr->next_condition = (condition_t *) malloc(sizeof(condition_t));
-						current_and_condition_ptr = current_and_condition_ptr->next_condition;
-					}
-
-					current_condition_ptr = current_and_condition_ptr;
-					ptr = strtok(NULL, delim);
-					step = stepWhereField;
+					step = stepWhereAnd;
 				}
 				else if (strcmp(ptr, "OR") == 0)
 				{
-					if (query->or_condition_ptr == NULL) 
-					{
-						query->or_condition_ptr = (condition_t *) malloc(sizeof(condition_t));
-						current_or_condition_ptr = query->or_condition_ptr;
-					}
-					else
-					{
-						current_or_condition_ptr->next_condition = (condition_t *) malloc(sizeof(condition_t));
-						current_or_condition_ptr = current_or_condition_ptr->next_condition;
-					}
-
-					current_condition_ptr = current_or_condition_ptr;
-					ptr = strtok(NULL, delim);
-					step = stepWhereField;
+					step = stepWhereOr;
 				}
 			}
+
+			break;
+
+		case stepWhereValue:
+			current_condition_ptr->operand2 = ptr;
+			current_condition_ptr->operand2_is_field = true;
+
+			ptr = strtok(NULL, delim);
+			if (ptr != NULL) {
+				if (strcmp(ptr, "AND") == 0) 
+				{
+					step = stepWhereAnd;
+				}
+				else if (strcmp(ptr, "OR") == 0)
+				{
+					step = stepWhereOr;
+				}
+			}
+			break;
+
+		case stepWhereAnd:
+			if (current_and_condition_ptr == NULL)
+			{
+				query->and_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+				current_and_condition_ptr = query->and_condition_ptr;
+			}
+			else 
+			{
+				current_and_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
+				current_and_condition_ptr = current_and_condition_ptr->next_condition;
+			}
+
+			current_condition_ptr = current_and_condition_ptr;
+			ptr = strtok(NULL, delim);
+			step = stepWhereField;
+			break;
+		
+		case stepWhereOr:
+			if (query->or_condition_ptr == NULL) 
+			{
+				query->or_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+				current_or_condition_ptr = query->or_condition_ptr;
+			}
+			else
+			{
+				current_or_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
+				current_or_condition_ptr = current_or_condition_ptr->next_condition;
+			}
+
+			current_condition_ptr = current_or_condition_ptr;
+			ptr = strtok(NULL, delim);
+			step = stepWhereField;
 			break;
 
 		default:
@@ -692,112 +788,81 @@ query_t* parse_sql(char *input_sql) {
 	return query;
 }
 
+char* check_operator(operator_t op) {
+    switch (op)
+    {
+    case Eq:
+        return "=";
+    case Gt:
+        return ">";
+    case Lt:
+        return "<";
+    case Gte:
+        return ">=";
+    case Lte:
+        return "<=";
+    case Ne:
+        return "!=";
+    case Like:
+        return "LIKE";
+    default:
+        break;
+    }
+
+    return NULL;
+}
+
+void print_where_condition(condition_t *cond) {
+    char *operator_to_print = check_operator(cond->operator);
+    char *operand_print;
+    if (strcmp(operator_to_print, "LIKE") == 0) {
+        operand_print = ((like_condition_t *) cond->operand2)->ex;
+    }
+    else {
+        operand_print = cond->operand2;
+    }
+
+    printf("\"%s %s %s\", ", cond->operand1, operator_to_print, operand_print);
+}
+
 void print_query_object(query_t *query) {
-   if (query->type == SELECT) {
-        printf("The query type is 'SELECT' \n");
+    if (query->type == SELECT) {
+        printf("The query type is \"SELECT\" \n");
     }
 
     field_node_t *current_field = query->field_ptr;
     printf("The select fields are ");
     while (current_field != NULL)
 	{
-		printf("'%s', ", current_field->val);
+		printf("\"%s\", ", current_field->val);
 		current_field = current_field->next;
 	}
     printf("\n");
 
-    printf("The tablename is '%s' \n", query->table_name);
+    printf("The tablename is \"%s\" \n", query->table_name);
 
     condition_t *current_condition = query->condition_ptr;
     printf("The condition is ");
-    char *operator;
-    switch (current_condition->operator)
-    {
-    case Eq:
-        operator = "=";
-        break;
-    case Gt:
-        operator = ">";
-        break;
-    case Lt:
-        operator = "<";
-        break;
-    case Gte:
-        operator = ">=";
-        break;
-    case Lte:
-        operator = "<=";
-        break;
-    case Ne:
-        operator = "!=";
-        break;
-    default:
-        break;
+
+    if (current_condition != NULL) {
+        print_where_condition(current_condition);
     }
-    printf("'%s %s %s' \n", current_condition->operand1, operator, current_condition->operand2);
+    printf("\n");
 
     current_condition = query->and_condition_ptr;
     printf("The AND conditions are ");
-    while (current_condition != NULL && current_condition != NULL) 
+    while (current_condition != NULL) 
     {  
-        char *operator;
-        switch (current_condition->operator)
-        {
-        case Eq:
-            operator = "=";
-            break;
-        case Gt:
-            operator = ">";
-            break;
-        case Lt:
-            operator = "<";
-            break;
-        case Gte:
-            operator = ">=";
-            break;
-        case Lte:
-            operator = "<=";
-            break;
-        case Ne:
-            operator = "!=";
-            break;
-        default:
-            break;
-        }
-        printf("'%s %s %s', ", current_condition->operand1, operator, current_condition->operand2);
+        print_where_condition(current_condition);
         current_condition = current_condition->next_condition;
     }
     printf("\n");
 
     current_condition = query->or_condition_ptr;
     printf("The OR conditions are ");
-    while (current_condition != NULL && current_condition != NULL) 
-    {  
-        char *operator;
-        switch (current_condition->operator)
-        {
-        case Eq:
-            operator = "=";
-            break;
-        case Gt:
-            operator = ">";
-            break;
-        case Lt:
-            operator = "<";
-            break;
-        case Gte:
-            operator = ">=";
-            break;
-        case Lte:
-            operator = "<=";
-            break;
-        case Ne:
-            operator = "!=";
-            break;
-        default:
-            break;
-        }
-        printf("'%s %s %s', ", current_condition->operand1, operator, current_condition->operand2);
+    while (current_condition != NULL) 
+    {
+        print_where_condition(current_condition);
         current_condition = current_condition->next_condition;
     }
     printf("\n");

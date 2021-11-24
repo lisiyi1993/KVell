@@ -1,9 +1,10 @@
 #include "hashtable.h"
+#include <regex.h>
 
 #ifndef WORKLOAD_TPCH
 #define WORKLOAD_TPCH
 
-#define NB_LINEITEMS 30
+#define NB_LINEITEMS 10
 
 size_t get_db_size_sql_parser(void);
 
@@ -23,14 +24,21 @@ typedef enum operator {
     Lt,
     Gte,
     Lte,
+    Like,
 } operator_t;
+
+typedef struct like_condition
+{
+    char *ex;
+    regex_t regex;
+} like_condition_t;
 
 typedef struct condition
 {
     char *operand1;
     bool operand1_is_field;
     operator_t operator;
-    char *operand2;
+    void *operand2;
     bool operand2_is_field;
     struct condition *next_condition;
 } condition_t;

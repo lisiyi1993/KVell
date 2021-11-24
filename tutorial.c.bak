@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
       // printf("done\n");
    }
 
-   char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG FROM table WHERE RETURNFLAG = C";
+   char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '%04' OR DISCOUNT < 500";
    query = parse_sql(input_sql);
    print_query_object(query);
 
