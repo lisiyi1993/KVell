@@ -50,7 +50,7 @@ bool compare_value(void *item_value, void *expected_value, operator_t operator, 
    int reti;
    switch (operator)
    {
-   case Eq:
+   case EQ:
       switch (type)
       {
       case INT:
@@ -63,22 +63,22 @@ bool compare_value(void *item_value, void *expected_value, operator_t operator, 
          return false;
          break;
       }
-   case Gt:
+   case GT:
       return item_value > expected_value;
       break;
-   case Lt:
+   case LT:
       return item_value < expected_value;
       break;
-   case Gte:
+   case GTE:
       return item_value >= expected_value;
       break;
-   case Lte:
+   case LTE:
       return item_value <= expected_value;
       break;
-   case Ne:
+   case NE:
       return item_value != expected_value;
       break;
-   case Like:
+   case LIKE:
       reti = regexec(&(((like_condition_t *) expected_value)->regex), (char *) item_value, 0, NULL, 0);
       if (reti == 0) {
          return true;
@@ -93,7 +93,7 @@ bool compare_value(void *item_value, void *expected_value, operator_t operator, 
    }
 }
 
-bool compare_column_value(char *item, char *column_name, operator_t operator, char *value) {
+bool compare_column_value(char *item, char *column_name, operator_t operator, char *value, bool not) {
    struct column_info *ci = ht_get(test_table->column_map, column_name);
    void *item_value;
    void *expected_value;
@@ -113,8 +113,13 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, ch
       return false;
       break;
    }
-
-   return compare_value(item_value, expected_value, operator, ci->type);
+   
+   if (not) {
+      return !compare_value(item_value, expected_value, operator, ci->type);
+   }
+   else {
+      return compare_value(item_value, expected_value, operator, ci->type);
+   }
 }
 
 char *add_column_value(char *item, char *column_name, void *value) {
@@ -353,14 +358,14 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       // check if item respect the where condition
       condition_t *current_condition = query->condition_ptr;
       if (current_condition != NULL) {
-         bool b = compare_column_value(item, current_condition->operand1, current_condition->operator, current_condition->operand2);
+         bool b = compare_column_value(item, current_condition->operand1, current_condition->operator, current_condition->operand2, current_condition->not);
          valid_conds = valid_conds && b;
       }
 
       current_condition = query->and_condition_ptr;
       while (current_condition != NULL)
       {
-         bool b = compare_column_value(item, current_condition->operand1, current_condition->operator, current_condition->operand2);
+         bool b = compare_column_value(item, current_condition->operand1, current_condition->operator, current_condition->operand2, current_condition->not);
          valid_conds = valid_conds && b;
          if (!valid_conds) 
          {
@@ -372,7 +377,7 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       current_condition = query->or_condition_ptr;
       while (current_condition != NULL)
       {
-         bool b = compare_column_value(item, current_condition->operand1, current_condition->operator, current_condition->operand2);
+         bool b = compare_column_value(item, current_condition->operand1, current_condition->operator, current_condition->operand2, current_condition->not);
          valid_conds = valid_conds || b;
 
          if (valid_conds) {
@@ -389,7 +394,7 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       // item pass the conditions check
       char *key_string = get_column_string_value(item, "LINENUMBER");
 
-      field_node_t* current_field = query->field_ptr;
+      list_node_t* current_field = query->field_ptr;
       char *value = malloc(1024);
       while (current_field != NULL)
       {
@@ -511,53 +516,58 @@ struct workload_api SQL_PARSER = {
 
 typedef enum state
 {
-	stepType,
-    stepSelectField,
-	stepSelectFrom,
-	stepSelectComma,
-	stepSelectFromTable,
-	stepWhere,
-	stepWhereField,
-   stepWhereAndField,
-   stepWhereOrField,
-	stepWhereOperator,
-	stepWhereValue,
-	stepWhereLikeValue,
-	stepWhereAnd,
-	stepWhereOr
+   stepType,
+   stepSelectField,
+   stepSelectFrom,
+   stepSelectComma,
+   stepSelectFromTable,
+   stepWhere,
+   stepWhereField,
+   stepWhereNot,
+   stepWhereIn,
+   stepWhereLike,
+   stepWhereOperator,
+   stepWhereValue,
+   stepWhereLikeValue,
+   stepWhereInValue,
+   stepWhereContinue,
+   stepWhereAnd,
+   stepWhereOr,
 } state_t;
 
 void str_replace(char *target, const char *needle, const char *replacement)
 {
-    char buffer[1024] = { 0 };
-    char *insert_point = &buffer[0];
-    const char *tmp = target;
-    size_t needle_len = strlen(needle);
-    size_t repl_len = strlen(replacement);
+   char buffer[1024] = { 0 };
+   char *insert_point = &buffer[0];
+   const char *tmp = target;
+   size_t needle_len = strlen(needle);
+   size_t repl_len = strlen(replacement);
 
-    while (1) {
-        const char *p = strstr(tmp, needle);
+   while (1) 
+   {
+      const char *p = strstr(tmp, needle);
 
-        // walked past last occurrence of needle; copy remaining part
-        if (p == NULL) {
-            strcpy(insert_point, tmp);
-            break;
-        }
+      // walked past last occurrence of needle; copy remaining part
+      if (p == NULL) 
+      {
+         strcpy(insert_point, tmp);
+         break;
+      }
 
-        // copy part before needle
-        memcpy(insert_point, tmp, p - tmp);
-        insert_point += p - tmp;
+      // copy part before needle
+      memcpy(insert_point, tmp, p - tmp);
+      insert_point += p - tmp;
 
-        // copy replacement string
-        memcpy(insert_point, replacement, repl_len);
-        insert_point += repl_len;
+      // copy replacement string
+      memcpy(insert_point, replacement, repl_len);
+      insert_point += repl_len;
 
-        // adjust pointers, move on
-        tmp = p + needle_len;
-    }
+      // adjust pointers, move on
+      tmp = p + needle_len;
+   }
 
-    // write altered string back to target
-    strcpy(target, buffer);
+   // write altered string back to target
+   strcpy(target, buffer);
 }
 
 query_t* parse_sql(char *input_sql) {
@@ -566,304 +576,423 @@ query_t* parse_sql(char *input_sql) {
 
 	query_t *query = (query_t *) calloc(1, sizeof(query_t));
 	state_t step = stepType;
-	field_node_t *current_field_ptr = NULL;
+	list_node_t *current_field_ptr = NULL;
 
 	condition_t *current_condition_ptr = NULL;
 	condition_t *current_and_condition_ptr = NULL;
 	condition_t *current_or_condition_ptr = NULL;
 	like_condition_t *curent_like_condition = NULL;
 
-	while (ptr != NULL)
-    {
-		switch (step)
-		{
-		case stepType:
-			if (strcmp(ptr, "SELECT") == 0)
-			{
-				query->type = SELECT;
-				step = stepSelectField;
+	in_condition_t *current_in_condition = NULL;
+   list_node_t *current_in_value_ptr = NULL;
 
-				query->field_ptr = (field_node_t *) calloc(1, sizeof(field_node_t));
-				current_field_ptr = query->field_ptr;
-			}
+   while (ptr != NULL)
+   {
+      switch (step)
+      {
+         case stepType: 
+         {
+            if (strcmp(ptr, "SELECT") == 0)
+            {
+               query->type = SELECT;
+               step = stepSelectField;
 
-			ptr = strtok(NULL, delim);
-			break;
+               query->field_ptr = (list_node_t *) calloc(1, sizeof(list_node_t));
+               current_field_ptr = query->field_ptr;
+            }
 
-		case stepSelectField:
-			current_field_ptr->val = ptr;
-			step = stepSelectFrom;
+            ptr = strtok(NULL, delim);
+            break;
+         }
+         case stepSelectField: 
+         {
+            current_field_ptr->val = ptr;
+            step = stepSelectFrom;
 
-			ptr = strtok(NULL, delim);
-			if (strcmp(ptr, ",") == 0) 
-			{
-				step = stepSelectComma;
-			}
-			else 
-			{
-				step = stepSelectFrom;
-			}
+            ptr = strtok(NULL, delim);
+            if (strcmp(ptr, ",") == 0) 
+            {
+               step = stepSelectComma;
+            }
+            else 
+            {
+               step = stepSelectFrom;
+            }
 
-			break;
+            break;
+         }
+         case stepSelectComma: 
+         {
+            current_field_ptr->next = (list_node_t *) calloc(1, sizeof(list_node_t));
+            current_field_ptr = current_field_ptr->next;
 
-		case stepSelectComma:
-			current_field_ptr->next = (field_node_t *) calloc(1, sizeof(field_node_t));
-			current_field_ptr = current_field_ptr->next;
+            step = stepSelectField;
+            ptr = strtok(NULL, delim);
+            break;
+         }
+         case stepSelectFrom: 
+         {
+            step = stepSelectFromTable;
+            ptr = strtok(NULL, delim);
+            break;
+         }
+         case stepSelectFromTable: 
+         {
+            query->table_name = ptr;
+            ptr = strtok(NULL, delim);
 
-			step = stepSelectField;
-			ptr = strtok(NULL, delim);
-			break;
+            if (ptr != NULL && strcmp(ptr, "WHERE") == 0)
+            {
+               step = stepWhere;
+            }
 
-		case stepSelectFrom:
-			step = stepSelectFromTable;
-			ptr = strtok(NULL, delim);
-			break;
+            break;
+         }
+         case stepWhere: 
+         {
+            ptr = strtok(NULL, delim);
 
-		case stepSelectFromTable:
-			query->table_name = ptr;
-			ptr = strtok(NULL, delim);
-			
-			if (ptr != NULL && strcmp(ptr, "WHERE") == 0)
-			{
-				step = stepWhere;
-			}
-			
-			break;
+            if (query->condition_ptr == NULL) 
+            {
+               query->condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+               current_condition_ptr = query->condition_ptr;
+            }
 
-		case stepWhere:
-			ptr = strtok(NULL, delim);
+            step = stepWhereField;
+            break;
+         }
+         case stepWhereField: 
+         {
+            current_condition_ptr->operand1 = ptr;
+            current_condition_ptr->operand1_is_field = true;
+            current_condition_ptr->not = false;
 
-			if (query->condition_ptr == NULL) 
-			{
-				query->condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
-				current_condition_ptr = query->condition_ptr;
-			}
-			
-			step = stepWhereField;
-			break;
+            ptr = strtok(NULL, delim);
 
-		case stepWhereField:
-			current_condition_ptr->operand1 = ptr;
-			current_condition_ptr->operand1_is_field = true;
+            if (strcmp(ptr, "NOT") == 0) 
+            {
+               step = stepWhereNot;
+            }
+            else 
+            {
+               step = stepWhereOperator;
+            }
 
-			ptr = strtok(NULL, delim);
-			step = stepWhereOperator;
-			break;
+            break;
+         }
+         case stepWhereNot: 
+         {
+            current_condition_ptr->not = true;
+            ptr = strtok(NULL, delim);
+            step = stepWhereOperator;
+            break;
+         }
+         case stepWhereOperator: 
+         {
+            if (strcmp(ptr, "LIKE") == 0) 
+            {
+               current_condition_ptr->operator = LIKE;
+               step = stepWhereLike;
+            }
+            else if (strcmp(ptr, "IN") == 0) {
+               current_condition_ptr->operator = IN;
+               step = stepWhereIn;
+            }
+            else if (strcmp(ptr, "=") == 0) 
+            {
+               current_condition_ptr->operator = EQ;
+               step = stepWhereValue;
+            }
+            else if (strcmp(ptr, ">") == 0)
+            {
+               current_condition_ptr->operator = GT;
+               step = stepWhereValue;
+            }
+            else if (strcmp(ptr, "<") == 0)
+            {
+               current_condition_ptr->operator = LT;
+               step = stepWhereValue;
+            }
+            else if (strcmp(ptr, ">=") == 0)
+            {
+               current_condition_ptr->operator = GTE;
+               step = stepWhereValue;
+            }
+            else if (strcmp(ptr, "<=") == 0)
+            {
+               current_condition_ptr->operator = LTE;
+               step = stepWhereValue;
+            }
+            else if (strcmp(ptr, "!=") == 0)
+            {
+               current_condition_ptr->operator = NE;
+               step = stepWhereValue;
+            }
 
-		case stepWhereOperator:
-			if (strcmp(ptr, "LIKE") == 0) 
-			{
-				current_condition_ptr->operator = Like;
-				ptr = strtok(NULL, delim);
-				step = stepWhereLikeValue;
-				break;
-			}
+            ptr = strtok(NULL, delim);
+            break;
+         }
+         case stepWhereLike: 
+         {
+            curent_like_condition = (like_condition_t *) malloc(sizeof(like_condition_t));
+            curent_like_condition->ex = ptr;
+            step = stepWhereLikeValue;
+            break;
+         }
+         case stepWhereLikeValue: 
+         {
+            char *required_ex = malloc(strlen(ptr));
+            strcpy(required_ex, ptr);
+            required_ex[0] = '^';
+            required_ex[strlen(required_ex) - 1] = '$';
 
-			if (strcmp(ptr, "=") == 0) 
-			{
-				current_condition_ptr->operator = Eq;
-			}
-			else if (strcmp(ptr, ">") == 0)
-			{
-				current_condition_ptr->operator = Gt;
-			}
-			else if (strcmp(ptr, "<") == 0)
-			{
-				current_condition_ptr->operator = Lt;
-			}
-			else if (strcmp(ptr, ">=") == 0)
-			{
-				current_condition_ptr->operator = Gte;
-			}
-			else if (strcmp(ptr, "<=") == 0)
-			{
-				current_condition_ptr->operator = Lte;
-			}
-			else if (strcmp(ptr, "!=") == 0)
-			{
-				current_condition_ptr->operator = Ne;
-			}
-			
-			ptr = strtok(NULL, delim);
-			step = stepWhereValue;
-			break;
+            str_replace(required_ex, "%", ".*");
 
-		case stepWhereLikeValue:
+            regcomp(&(curent_like_condition->regex), required_ex, 0);
 
-			curent_like_condition = (like_condition_t *) malloc(sizeof(like_condition_t));
+            // int reti = regexec(&(curent_like_condition->regex), "abc", 0, NULL, 0);
+            // if (reti == 0) {
+            //   printf("MATCH \n");
+            // }
+            // else {
+            //   printf("NOT MATCH \n");
+            // }
 
-			curent_like_condition->ex = ptr;
+            current_condition_ptr->operand2 = curent_like_condition;
+            current_condition_ptr->operand2_is_field = true;
 
-			char *required_ex = malloc(strlen(ptr));
-			strcpy(required_ex, ptr);
-			required_ex[0] = '^';
-			required_ex[strlen(required_ex) - 1] = '$';
+            ptr = strtok(NULL, delim);
+            step = stepWhereContinue;
 
-			str_replace(required_ex, "%", ".*");
+            break;
+         }
+         case stepWhereIn: 
+         {
+            current_in_condition = (in_condition_t *) malloc(sizeof(in_condition_t));
+            current_in_condition->match_ptr = (list_node_t *) calloc(1, sizeof(list_node_t));
 
-			regcomp(&(curent_like_condition->regex), required_ex, 0);
+            current_condition_ptr->operand2 = current_in_condition;
+            current_condition_ptr->operand2_is_field = true;
 
-			// int reti = regexec(&(curent_like_condition->regex), "abc", 0, NULL, 0);
-			// if (reti == 0) {
-			// 	printf("MATCH \n");
-			// }
-			// else {
-			// 	printf("NOT MATCH \n");
-			// }
+            current_in_value_ptr = current_in_condition->match_ptr;
 
-			current_condition_ptr->operand2 = curent_like_condition;
-			current_condition_ptr->operand2_is_field = true;
+            step = stepWhereInValue;
+            break;
+         }
+         case stepWhereInValue: 
+         {
+            char *in_value = malloc(strlen(ptr));
+            strcpy(in_value, ptr);
 
-			ptr = strtok(NULL, delim);
-			if (ptr != NULL) {
-				if (strcmp(ptr, "AND") == 0) 
-				{
-					step = stepWhereAnd;
-				}
-				else if (strcmp(ptr, "OR") == 0)
-				{
-					step = stepWhereOr;
-				}
-			}
+            if (in_value[0] == '(') 
+            {
+               in_value += 1;
+            }
 
-			break;
+            if (in_value[strlen(in_value) - 1] == ')') 
+            {
+               in_value[strlen(in_value) - 1] = '\0';
+            }
 
-		case stepWhereValue:
-			current_condition_ptr->operand2 = ptr;
-			current_condition_ptr->operand2_is_field = true;
+            // remove ''
+            in_value += 1;
+            in_value[strlen(in_value) - 1] = '\0';
 
-			ptr = strtok(NULL, delim);
-			if (ptr != NULL) {
-				if (strcmp(ptr, "AND") == 0) 
-				{
-					step = stepWhereAnd;
-				}
-				else if (strcmp(ptr, "OR") == 0)
-				{
-					step = stepWhereOr;
-				}
-			}
-			break;
+            current_in_value_ptr->val = in_value;
+            printf("in_value: %s\n", current_in_value_ptr->val);
 
-		case stepWhereAnd:
-			if (current_and_condition_ptr == NULL)
-			{
-				query->and_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
-				current_and_condition_ptr = query->and_condition_ptr;
-			}
-			else 
-			{
-				current_and_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
-				current_and_condition_ptr = current_and_condition_ptr->next_condition;
-			}
+            ptr = strtok(NULL, delim);
+            if (ptr != NULL && strcmp(ptr, ",") == 0) 
+            {
+               current_in_value_ptr->next = (list_node_t *) calloc(1, sizeof(list_node_t));
+               current_in_value_ptr = current_in_value_ptr->next;
+               step = stepWhereInValue;
+               ptr = strtok(NULL, delim);
+            }
+            else 
+            {
+               step = stepWhereContinue;
+            }
 
-			current_condition_ptr = current_and_condition_ptr;
-			ptr = strtok(NULL, delim);
-			step = stepWhereField;
-			break;
-		
-		case stepWhereOr:
-			if (query->or_condition_ptr == NULL) 
-			{
-				query->or_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
-				current_or_condition_ptr = query->or_condition_ptr;
-			}
-			else
-			{
-				current_or_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
-				current_or_condition_ptr = current_or_condition_ptr->next_condition;
-			}
+            break;
+         }
+         case stepWhereValue: 
+         {
+            current_condition_ptr->operand2 = ptr;
+            current_condition_ptr->operand2_is_field = true;
 
-			current_condition_ptr = current_or_condition_ptr;
-			ptr = strtok(NULL, delim);
-			step = stepWhereField;
-			break;
+            ptr = strtok(NULL, delim);
+            step = stepWhereContinue;
+            break;
+         }
+         case stepWhereContinue: 
+         {
+            if (ptr != NULL) {
+               if (strcmp(ptr, "AND") == 0) 
+               {
+                  step = stepWhereAnd;
+               }
+               else if (strcmp(ptr, "OR") == 0)
+               {
+                  step = stepWhereOr;
+               }
+               break;
+            }
+         }
+         case stepWhereAnd: 
+         {
+            if (current_and_condition_ptr == NULL)
+            {
+               query->and_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+               current_and_condition_ptr = query->and_condition_ptr;
+            }
+            else 
+            {
+               current_and_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
+               current_and_condition_ptr = current_and_condition_ptr->next_condition;
+            }
 
-		default:
-			ptr = strtok(NULL, delim);
-			break;
-		}
-    }
+            current_condition_ptr = current_and_condition_ptr;
+            ptr = strtok(NULL, delim);
+            step = stepWhereField;
+            break;
+         }
+         case stepWhereOr: 
+         {
+            if (query->or_condition_ptr == NULL) 
+            {
+               query->or_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+               current_or_condition_ptr = query->or_condition_ptr;
+            }
+            else
+            {
+               current_or_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
+               current_or_condition_ptr = current_or_condition_ptr->next_condition;
+            }
 
-	return query;
+            current_condition_ptr = current_or_condition_ptr;
+            ptr = strtok(NULL, delim);
+            step = stepWhereField;
+            break;
+         }
+         default: 
+         {
+            ptr = strtok(NULL, delim);
+            break;
+         }
+      }
+   }
+
+   return query;
 }
 
-char* check_operator(operator_t op) {
-    switch (op)
-    {
-    case Eq:
-        return "=";
-    case Gt:
-        return ">";
-    case Lt:
-        return "<";
-    case Gte:
-        return ">=";
-    case Lte:
-        return "<=";
-    case Ne:
-        return "!=";
-    case Like:
-        return "LIKE";
-    default:
-        break;
-    }
+char* check_operator(operator_t op) 
+{
+   switch (op)
+   {
+   case EQ:
+      return "=";
+   case GT:
+      return ">";
+   case LT:
+      return "<";
+   case GTE:
+      return ">=";
+   case LTE:
+      return "<=";
+   case NE:
+      return "!=";
+   case LIKE:
+      return "LIKE";
+   case IN:
+      return "IN";
+   default:
+      break;
+   }
 
-    return NULL;
+   return NULL;
 }
 
-void print_where_condition(condition_t *cond) {
-    char *operator_to_print = check_operator(cond->operator);
-    char *operand_print;
-    if (strcmp(operator_to_print, "LIKE") == 0) {
-        operand_print = ((like_condition_t *) cond->operand2)->ex;
-    }
-    else {
-        operand_print = cond->operand2;
-    }
+void print_where_condition(condition_t *cond) 
+{
+   char *operator_to_print = check_operator(cond->operator);
+   char operand_print[512];
+   if (strcmp(operator_to_print, "LIKE") == 0) 
+   {
+      strcpy(operand_print, ((like_condition_t *) cond->operand2)->ex);
+   }
+   else if (strcmp(operator_to_print, "IN") == 0) 
+   {
+      strcpy(operand_print, "(");
+      list_node_t *cur_node = ((in_condition_t *) cond->operand2)->match_ptr;
+      while (cur_node != NULL)
+       {
+         strcat(operand_print, cur_node->val);
+         cur_node = cur_node->next;
 
-    printf("\"%s %s %s\", ", cond->operand1, operator_to_print, operand_print);
+         if (cur_node != NULL) 
+         {
+            strcat(operand_print, ", ");
+         }
+      }
+      strcat(operand_print, ")");
+   }
+   else {
+      strcpy(operand_print, cond->operand2);
+   }
+
+   if (cond->not) 
+   {
+      printf("\"%s NOT %s %s\", ", cond->operand1, operator_to_print, operand_print);
+   }
+   else 
+   {
+      printf("\"%s %s %s\", ", cond->operand1, operator_to_print, operand_print);
+   }
 }
 
-void print_query_object(query_t *query) {
-    if (query->type == SELECT) {
-        printf("The query type is \"SELECT\" \n");
-    }
+void print_query_object(query_t *query) 
+{
+   if (query->type == SELECT) 
+   {
+      printf("The query type is \"SELECT\" \n");
+   }
 
-    field_node_t *current_field = query->field_ptr;
-    printf("The select fields are ");
-    while (current_field != NULL)
-	{
-		printf("\"%s\", ", current_field->val);
-		current_field = current_field->next;
-	}
-    printf("\n");
+   list_node_t *current_field = query->field_ptr;
+   printf("The select fields are ");
+   while (current_field != NULL) 
+   {
+      printf("\"%s\", ", current_field->val);
+      current_field = current_field->next;
+   }
+   printf("\n");
 
-    printf("The tablename is \"%s\" \n", query->table_name);
+   printf("The tablename is \"%s\" \n", query->table_name);
 
-    condition_t *current_condition = query->condition_ptr;
-    printf("The condition is ");
+   condition_t *current_condition = query->condition_ptr;
+   printf("The condition is ");
 
-    if (current_condition != NULL) {
-        print_where_condition(current_condition);
-    }
-    printf("\n");
+   if (current_condition != NULL) 
+   {
+      print_where_condition(current_condition);
+   }
+   printf("\n");
 
-    current_condition = query->and_condition_ptr;
-    printf("The AND conditions are ");
-    while (current_condition != NULL) 
-    {  
-        print_where_condition(current_condition);
-        current_condition = current_condition->next_condition;
-    }
-    printf("\n");
+   current_condition = query->and_condition_ptr;
+   printf("The AND conditions are ");
+   while (current_condition != NULL) 
+   {   
+      print_where_condition(current_condition);
+      current_condition = current_condition->next_condition;
+   }
+   printf("\n");
 
-    current_condition = query->or_condition_ptr;
-    printf("The OR conditions are ");
-    while (current_condition != NULL) 
-    {
-        print_where_condition(current_condition);
-        current_condition = current_condition->next_condition;
-    }
-    printf("\n");
+   current_condition = query->or_condition_ptr;
+   printf("The OR conditions are ");
+   while (current_condition != NULL) 
+   {
+      print_where_condition(current_condition);
+      current_condition = current_condition->next_condition;
+   }
+   printf("\n");
 }

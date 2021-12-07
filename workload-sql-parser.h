@@ -9,48 +9,56 @@
 size_t get_db_size_sql_parser(void);
 
 typedef struct node {
-    char* val;
-    struct node * next;
-} field_node_t;
+   char* val;
+   struct node * next;
+} list_node_t;
 
 typedef enum type {
-    SELECT
+   SELECT
 } type_t;
 
-typedef enum operator {
-    Eq,
-    Ne,
-    Gt,
-    Lt,
-    Gte,
-    Lte,
-    Like,
+typedef enum operator 
+{
+   EQ,
+   NE,
+   GT,
+   LT,
+   GTE,
+   LTE,
+   LIKE,
+   IN,
 } operator_t;
 
 typedef struct like_condition
 {
-    char *ex;
-    regex_t regex;
+   char *ex;
+   regex_t regex;
 } like_condition_t;
+
+typedef struct in_condition
+{
+   list_node_t *match_ptr;
+} in_condition_t;
 
 typedef struct condition
 {
-    char *operand1;
-    bool operand1_is_field;
-    operator_t operator;
-    void *operand2;
-    bool operand2_is_field;
-    struct condition *next_condition;
+   char *operand1;
+   bool operand1_is_field;
+   operator_t operator;
+   void *operand2;
+   bool operand2_is_field;
+   struct condition *next_condition;
+   bool not;
 } condition_t;
 
 typedef struct query
 {
-    type_t type;
-    char *table_name;
-    field_node_t *field_ptr;
-    condition_t *condition_ptr;
-    condition_t *and_condition_ptr;
-    condition_t *or_condition_ptr;
+   type_t type;
+   char *table_name;
+   list_node_t *field_ptr;
+   condition_t *condition_ptr;
+   condition_t *and_condition_ptr;
+   condition_t *or_condition_ptr;
 } query_t;
 
 struct table_struct {
@@ -59,14 +67,14 @@ struct table_struct {
 };
 
 typedef enum {
-    INT, 
-    STRING
+   INT, 
+   STRING
 } data_type;
 
 struct column_info
 {
-    int index;
-    data_type type;
+   int index;
+   data_type type;
 };
 
 
