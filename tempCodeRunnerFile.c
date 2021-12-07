@@ -1,1 +1,1 @@
-table
+RETURNFLAG IN ('C' , 'A') AND 
