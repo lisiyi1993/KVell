@@ -1,1 +1,1 @@
-SHIPDATE
+RETURNFLAG IN ('C' , 'A') AND 

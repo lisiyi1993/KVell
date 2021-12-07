@@ -46,82 +46,6 @@ long sql_parser_get_key_lineitem(long linenumber) {
    return k.key;
 }
 
-bool compare_value(void *item_value, void *expected_value, operator_t operator, data_type type) {
-   int reti;
-   switch (operator)
-   {
-   case EQ:
-      switch (type)
-      {
-      case INT:
-         return item_value == expected_value;
-         break;
-      case STRING:
-         return strcmp(item_value, expected_value) == 0;
-         break;
-      default:
-         return false;
-         break;
-      }
-   case GT:
-      return item_value > expected_value;
-      break;
-   case LT:
-      return item_value < expected_value;
-      break;
-   case GTE:
-      return item_value >= expected_value;
-      break;
-   case LTE:
-      return item_value <= expected_value;
-      break;
-   case NE:
-      return item_value != expected_value;
-      break;
-   case LIKE:
-      reti = regexec(&(((like_condition_t *) expected_value)->regex), (char *) item_value, 0, NULL, 0);
-      if (reti == 0) {
-         return true;
-      }
-      else {
-         return false;
-      }
-      break;
-   default:
-      return false;
-      break;
-   }
-}
-
-bool compare_column_value(char *item, char *column_name, operator_t operator, char *value, bool not) {
-   struct column_info *ci = ht_get(test_table->column_map, column_name);
-   void *item_value;
-   void *expected_value;
-   
-   switch (ci->type)
-   {
-   case INT:
-      item_value = (long) get_shash_uint(item, ci->index);
-      expected_value = atol(value);
-      break;
-   case STRING:
-      item_value = get_shash_string(item, ci->index);
-      expected_value =  value;
-      // printf("item_value: %s, value: %s \n", item_value, expected_value);
-      break;
-   default:
-      return false;
-      break;
-   }
-   
-   if (not) {
-      return !compare_value(item_value, expected_value, operator, ci->type);
-   }
-   else {
-      return compare_value(item_value, expected_value, operator, ci->type);
-   }
-}
-
 char *add_column_value(char *item, char *column_name, void *value) {
    struct column_info *ci = ht_get(test_table->column_map, column_name);
    switch (ci->type)
@@ -156,6 +80,83 @@ static char* get_column_string_value(char* item, char* column_name) {
    return tmp;
 }
 
+bool compare_column_value(char *item, char *column_name, operator_t operator, void *expected_value, bool not) {
+   struct column_info *ci = ht_get(test_table->column_map, column_name);
+   char *item_value = get_column_string_value(item, column_name);
+
+   bool res;
+   switch (operator)
+   {
+      case EQ: 
+      {
+         res = strcmp(item_value, (char *) expected_value) == 0;
+         break;
+      }
+      case GT: 
+      {
+         res = strcmp(item_value, (char *) expected_value) > 0;
+         break;
+      }
+      case LT: 
+      {
+         res = strcmp(item_value, (char *) expected_value) < 0;
+         break;
+      }
+      case GTE: 
+      {
+         res = strcmp(item_value, (char *) expected_value) >= 0;
+         break;
+      }
+      case LTE: 
+      {
+         res = strcmp(item_value, (char *) expected_value) <= 0;
+         break;
+      }
+      case NE:
+      {
+         res = strcmp(item_value, (char *) expected_value) != 0;
+         break;
+      }
+      case LIKE:
+      {
+         int reti = regexec(&(((like_condition_t *) expected_value)->regex), (char *) item_value, 0, NULL, 0);
+         if (reti == 0) {
+            res = true;
+         }
+         else {
+            res = false;
+         }
+         break;
+      }
+      case IN: 
+      {
+         list_node_t *cur_node = ((in_condition_t *) expected_value)->match_ptr;
+         res = false;
+         while (cur_node != NULL) 
+         {
+            if (strcmp(item_value, cur_node->val) == 0) {
+               res = true;
+               break;
+            }
+            else {
+               cur_node = cur_node->next;
+            }
+         }
+         break;
+      }
+      default: {
+         res = false;
+         break;
+      }
+   }
+   
+   if (not) {
+      return !res;
+   }
+   else {
+      return res;
+   }
+}
 
 /*
  * SQL PARSER loader
