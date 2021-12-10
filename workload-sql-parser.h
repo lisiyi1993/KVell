@@ -29,6 +29,18 @@ typedef enum operator
    IN,
 } operator_t;
 
+typedef enum value_type 
+{
+   SINGLE,
+   ARITHMETIC
+} value_t;
+
+typedef struct simple_condition
+{
+   void *value;
+   value_t value_type;
+} simple_condition_t;
+
 typedef struct like_condition
 {
    char *ex;
@@ -40,13 +52,18 @@ typedef struct in_condition
    list_node_t *match_ptr;
 } in_condition_t;
 
+typedef struct arithmetic_condition
+{
+   char *operand1;
+   char *operand2;
+   char *operator;
+} arithmetic_condition_t;
+
 typedef struct condition
 {
    char *operand1;
-   bool operand1_is_field;
    operator_t operator;
    void *operand2;
-   bool operand2_is_field;
    struct condition *next_condition;
    bool not;
 } condition_t;

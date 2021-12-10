@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
    }
 
    // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998-11%' OR RETURNFLAG LIKE 'A'";
-   char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE RETURNFLAG IN ('B' , 'C') AND DISCOUNT > 500";
+   char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE DISCOUNT = 700 + 51 AND RETURNFLAG NOT IN ('A' , 'C')";
    query = parse_sql(input_sql);
    print_query_object(query);
 
