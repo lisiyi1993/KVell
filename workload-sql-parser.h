@@ -108,12 +108,10 @@ query_t* parse_sql(char *ptr);
 
 query_t* query;
 
-void print_query_object(query_t *query);
-
 struct table_struct *test_table;
 
-static char *add_column_int_value(char *item, char *column_name, int int_value);
+void print_query_object(query_t *query);
 
-char *add_column_string_value(char *item, char *column_name, char *string_value);
+void create_test_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
 
 #endif

@@ -41,44 +41,16 @@ int main(int argc, char **argv) {
    char input_columns[][100] = {
       "ORDERKEY", "PARTKEY", "SUPPKEY", "LINENUMBER", "QUANTITY", "EXTENDEDPRICE", "DISCOUNT", "TAX", "RETURNFLAG", "LINESTATUS", "SHIPDATE", "COMMITDATE", "RECEIPTDATE", "SHIPINSTRUCT", "SHIPMODE", "COMMENT"
    };
-
    char input_columns_type[][100] = {
       "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING"
    };
-
-   test_table = calloc(1, sizeof(test_table));
-   test_table->name = "LINEITEM";
-   test_table->column_map = ht_create();
-   for (size_t i = 0; i < sizeof(input_columns)/100; i++)
-   {
-      // int *index = malloc(sizeof(int));
-      // *index = i;
-
-      struct column_info *ci = malloc(sizeof(ci));
-      ci->index = i;
-
-      if (strcmp(input_columns_type[i], "INT") == 0) {
-         ci->type = INT;
-      }
-      else if (strcmp(input_columns_type[i], "STRING") == 0)
-      {
-         ci->type = STRING;
-      }
-      
-      // if (test_table->column_map == NULL) {
-      //    printf("yes it is null\n");
-      // }
-      ht_set(test_table->column_map, input_columns[i], ci);
-      // struct column_info *ci_get = ht_get(test_table->column_map, input_columns[i]);
-      // printf("here \n");
-      // printf("%s and (%d)\n", input_columns[i], ci_get->index);
-      // printf("done\n");
-   }
+   create_test_table(sizeof(input_columns)/100, input_columns, input_columns_type);
 
    char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998%' AND DISCOUNT BETWEEN 0 AND 0 + 500";
-   // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE DISCOUNT BETWEEN 0 + 500 AND 0 + 999";
+   // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE DISCOUNT BETWEEN 0 AND 0 + 999";
    query = parse_sql(input_sql);
    print_query_object(query);
+   printf("\n");
 
    int nb_disks, nb_workers_per_disk;
    declare_timer;

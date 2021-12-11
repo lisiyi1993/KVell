@@ -25,6 +25,37 @@ enum column {
    ORDERKEY, PARTKEY, SUPPKEY, LINENUMBER, QUANTITY, EXTENDEDPRICE, DISCOUNT, TAX, RETURNFLAG, LINESTATUS, SHIPDATE, COMMITDATE, RECEIPTDATE, SHIPINSTRUCT, SHIPMODE, COMMENT,
 };
 
+void create_test_table(long num_columns, char input_columns[][100], char input_columns_type[][100]) {
+   test_table = calloc(1, sizeof(test_table));
+   test_table->name = "LINEITEM";
+   test_table->column_map = ht_create();
+   for (size_t i = 0; i < num_columns; i++)
+   {
+      // int *index = malloc(sizeof(int));
+      // *index = i;
+
+      struct column_info *ci = calloc(1, sizeof(ci));
+      ci->index = i;
+
+      if (strcmp(input_columns_type[i], "INT") == 0) {
+         ci->type = INT;
+      }
+      else if (strcmp(input_columns_type[i], "STRING") == 0)
+      {
+         ci->type = STRING;
+      }
+      
+      // if (test_table->column_map == NULL) {
+      //    printf("yes it is null\n");
+      // }
+      ht_set(test_table->column_map, input_columns[i], ci);
+      // struct column_info *ci_get = ht_get(test_table->column_map, input_columns[i]);
+      // printf("here \n");
+      // printf("%s and (%d)\n", input_columns[i], ci_get->index);
+      // printf("done\n");
+   }
+}
+
 /*
  * We want every DB insert to have a unique and identifiable key. These functions generate a unique key depending on the table, column and primary key(s) of a tuple.
  */
@@ -298,7 +329,7 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
       case BETWEEN:
       {
          between_condition_t *old_between_condition = (between_condition_t *) condition->operand2;
-         between_condition_t *new_between_condition = (between_condition_t *) malloc(sizeof(between_condition_t));
+         between_condition_t *new_between_condition = (between_condition_t *) calloc(1, sizeof(between_condition_t));
          new_between_condition->min_value_type = SINGLE;
          new_between_condition->max_value_type = SINGLE;
 
@@ -937,7 +968,7 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereEquality:
          {
-            current_euqality_condition = (simple_condition_t *) malloc(sizeof(simple_condition_t));
+            current_euqality_condition = (simple_condition_t *) calloc(1, sizeof(simple_condition_t));
 
             current_condition_ptr->operand2 = current_euqality_condition;
             step = stepWhereEqualityValue;
@@ -945,7 +976,7 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereLike: 
          {
-            curent_like_condition = (like_condition_t *) malloc(sizeof(like_condition_t));
+            curent_like_condition = (like_condition_t *) calloc(1, sizeof(like_condition_t));
             curent_like_condition->ex = ptr;
 
             current_condition_ptr->operand2 = curent_like_condition;
@@ -954,7 +985,7 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereBetween:
          {
-            current_between_condition = (between_condition_t *) malloc(sizeof(between_condition_t));
+            current_between_condition = (between_condition_t *) calloc(1, sizeof(between_condition_t));
 
             current_condition_ptr->operand2 = current_between_condition;
             step = stepWhereBetweenValue;
@@ -962,7 +993,7 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereIn: 
          {
-            current_in_condition = (in_condition_t *) malloc(sizeof(in_condition_t));
+            current_in_condition = (in_condition_t *) calloc(1, sizeof(in_condition_t));
             current_in_condition->match_ptr = (list_node_t *) calloc(1, sizeof(list_node_t));
             current_in_value_ptr = current_in_condition->match_ptr;
 
@@ -1076,7 +1107,6 @@ query_t* parse_sql(char *input_sql) {
             }
 
             current_in_value_ptr->val = in_value;
-            printf("in_value: %s\n", current_in_value_ptr->val);
 
             ptr = strtok(NULL, delim);
             if (ptr != NULL && strcmp(ptr, ",") == 0) 
@@ -1099,7 +1129,7 @@ query_t* parse_sql(char *input_sql) {
             if (ptr != NULL) {
                if (strcmp(ptr, "+") == 0 || strcmp(ptr, "-") == 0 || strcmp(ptr, "*") == 0 || strcmp(ptr, "/") == 0) 
                {
-                  arithmetic_condition_t *athm_condition = (arithmetic_condition_t *) malloc(sizeof(arithmetic_condition_t));
+                  arithmetic_condition_t *athm_condition = (arithmetic_condition_t *) calloc(1, sizeof(arithmetic_condition_t));
                   athm_condition->operator = ptr;
                   ptr = strtok(NULL, delim);
                   athm_condition->operand2 = ptr;
