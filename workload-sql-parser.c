@@ -312,8 +312,7 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
             case ARITHMETIC:
             {
                arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *)(old_between_condition->min_value);
-               char *new_min_value = perform_arithmetic(arithmetic_condition);
-               new_between_condition->min_value = new_min_value;
+               new_between_condition->min_value = perform_arithmetic(arithmetic_condition);
                break;
             }
             default:
@@ -330,8 +329,7 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
             case ARITHMETIC:
             {
                arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *)(old_between_condition->max_value);
-               char *new_max_value = perform_arithmetic(arithmetic_condition);
-               new_between_condition->max_value = new_max_value;
+               new_between_condition->max_value = perform_arithmetic(arithmetic_condition);
                break;
             }
             default:
