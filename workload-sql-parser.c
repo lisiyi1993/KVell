@@ -188,6 +188,20 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
          }
          break;
       }
+      case BETWEEN:
+      {
+         between_condition_t *between_condition = (between_condition_t *) expected_value;
+         long item_value = get_shash_uint(item, ci->index);
+         switch (ci->type)
+         {
+            case INT:
+               res = atol(between_condition->min_value) <= item_value && item_value <= atol(between_condition->max_value);
+               break;
+            default:
+               break;
+         }
+         break;
+      }
       case IN: 
       {
          list_node_t *cur_node = ((in_condition_t *) expected_value)->match_ptr;
@@ -226,7 +240,30 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
    }
 }
 
+char* perform_arithmetic(arithmetic_condition_t *arithmetic_condition) {
+   char *result;
+   if (strcmp(arithmetic_condition->operator, "+") == 0) 
+   {
+      asprintf(&result, "%d", atoi(arithmetic_condition->operand1) + atoi(arithmetic_condition->operand2));
+   }
+   else if (strcmp(arithmetic_condition->operator, "-") == 0) 
+   {
+      asprintf(&result, "%d", atoi(arithmetic_condition->operand1) - atoi(arithmetic_condition->operand2));
+   }
+   else if (strcmp(arithmetic_condition->operator, "*") == 0) 
+   {
+      asprintf(&result, "%d", atoi(arithmetic_condition->operand1) * atoi(arithmetic_condition->operand2));
+   }
+   else if (strcmp(arithmetic_condition->operator, "/") == 0) 
+   {
+      asprintf(&result, "%d", atoi(arithmetic_condition->operand1) / atoi(arithmetic_condition->operand2));
+   }
+
+   return result;
+}
+
 bool evaluate_where_condition(char *item, char *column_name, condition_t *condition) {
+   struct column_info *ci = ht_get(test_table->column_map, column_name);
    switch (condition->operator)
    {
       case EQ:
@@ -247,23 +284,7 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
             case ARITHMETIC:
             {
                arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *) simple_condition->value;
-               char *expected_value;
-               if (strcmp(arithmetic_condition->operator, "+") == 0) 
-               {
-                  asprintf(&expected_value, "%d", atoi(arithmetic_condition->operand1) + atoi(arithmetic_condition->operand2));
-               }
-               else if (strcmp(arithmetic_condition->operator, "-") == 0) 
-               {
-                  asprintf(&expected_value, "%d", atoi(arithmetic_condition->operand1) - atoi(arithmetic_condition->operand2));
-               }
-               else if (strcmp(arithmetic_condition->operator, "*") == 0) 
-               {
-                  asprintf(&expected_value, "%d", atoi(arithmetic_condition->operand1) * atoi(arithmetic_condition->operand2));
-               }
-               else if (strcmp(arithmetic_condition->operator, "/") == 0) 
-               {
-                  asprintf(&expected_value, "%d", atoi(arithmetic_condition->operand1) / atoi(arithmetic_condition->operand2));
-               }
+               char *expected_value = perform_arithmetic(arithmetic_condition);
                return compare_column_value(item, column_name, condition->operator, expected_value, condition->not);
                break;
             }
@@ -273,6 +294,51 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
             }
          }
          break;
+      }
+      case BETWEEN:
+      {
+         between_condition_t *old_between_condition = (between_condition_t *) condition->operand2;
+         between_condition_t *new_between_condition = (between_condition_t *) malloc(sizeof(between_condition_t));
+         new_between_condition->min_value_type = SINGLE;
+         new_between_condition->max_value_type = SINGLE;
+
+         switch (old_between_condition->min_value_type)
+         {
+            case SINGLE:
+            {
+               new_between_condition->min_value = old_between_condition->min_value;
+               break;
+            }
+            case ARITHMETIC:
+            {
+               arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *)(old_between_condition->min_value);
+               char *new_min_value = perform_arithmetic(arithmetic_condition);
+               new_between_condition->min_value = new_min_value;
+               break;
+            }
+            default:
+               break;
+         }
+
+         switch (old_between_condition->max_value_type)
+         {
+            case SINGLE:
+            {
+               new_between_condition->max_value = old_between_condition->max_value;
+               break;
+            }
+            case ARITHMETIC:
+            {
+               arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *)(old_between_condition->max_value);
+               char *new_max_value = perform_arithmetic(arithmetic_condition);
+               new_between_condition->max_value = new_max_value;
+               break;
+            }
+            default:
+               break;
+         }
+
+         return compare_column_value(item, column_name, condition->operator, new_between_condition, condition->not);
       }
       default:
       {
@@ -296,7 +362,7 @@ static char *sql_parser_lineitem(uint64_t uid) {
 /*
  * Function called by the workload-common interface. uid goes from 0 to the number of elements in the DB.
  */
-static char *create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
+static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
    if(uid == 0)
       assert(max_uid == get_db_size_sql_parser()); // set .nb_items_in_db = get_db_size_sql_parser() in main.c otherwise the DB will be partially populated
 
@@ -639,6 +705,10 @@ struct workload_api SQL_PARSER = {
    .create_unique_item = create_unique_item_sql_parser,
 };
 
+/**
+ * SQL PARSER 
+ **/
+
 typedef enum state
 {
    stepType,
@@ -648,14 +718,16 @@ typedef enum state
    stepSelectFromTable,
    stepWhere,
    stepWhereField,
+   stepWhereOperator,
    stepWhereNot,
+   stepWhereEquality,
    stepWhereIn,
    stepWhereLike,
-   stepWhereEquality,
-   stepWhereOperator,
+   stepWhereBetween,
    stepWhereEqualityValue,
    stepWhereLikeValue,
    stepWhereInValue,
+   stepWhereBetweenValue,
    stepWhereValueType,
    stepWhereContinue,
    stepWhereAnd,
@@ -711,6 +783,7 @@ query_t* parse_sql(char *input_sql) {
 
    simple_condition_t *current_euqality_condition = NULL;
    like_condition_t *curent_like_condition = NULL;
+   between_condition_t *current_between_condition = NULL;
    in_condition_t *current_in_condition = NULL;
    list_node_t *current_in_value_ptr = NULL;
 
@@ -825,6 +898,11 @@ query_t* parse_sql(char *input_sql) {
                current_condition_ptr->operator = IN;
                step = stepWhereIn;
             }
+            else if (strcmp(ptr, "BETWEEN") == 0) 
+            {
+               current_condition_ptr->operator = BETWEEN;
+               step = stepWhereBetween;
+            }
             else if (strcmp(ptr, "=") == 0) 
             {
                current_condition_ptr->operator = EQ;
@@ -862,6 +940,8 @@ query_t* parse_sql(char *input_sql) {
          case stepWhereEquality:
          {
             current_euqality_condition = (simple_condition_t *) malloc(sizeof(simple_condition_t));
+
+            current_condition_ptr->operand2 = current_euqality_condition;
             step = stepWhereEqualityValue;
             break;
          }
@@ -869,18 +949,26 @@ query_t* parse_sql(char *input_sql) {
          {
             curent_like_condition = (like_condition_t *) malloc(sizeof(like_condition_t));
             curent_like_condition->ex = ptr;
+
+            current_condition_ptr->operand2 = curent_like_condition;
             step = stepWhereLikeValue;
+            break;
+         }
+         case stepWhereBetween:
+         {
+            current_between_condition = (between_condition_t *) malloc(sizeof(between_condition_t));
+
+            current_condition_ptr->operand2 = current_between_condition;
+            step = stepWhereBetweenValue;
             break;
          }
          case stepWhereIn: 
          {
             current_in_condition = (in_condition_t *) malloc(sizeof(in_condition_t));
             current_in_condition->match_ptr = (list_node_t *) calloc(1, sizeof(list_node_t));
-
-            current_condition_ptr->operand2 = current_in_condition;
-
             current_in_value_ptr = current_in_condition->match_ptr;
 
+            current_condition_ptr->operand2 = current_in_condition;
             step = stepWhereInValue;
             break;
          }
@@ -888,7 +976,6 @@ query_t* parse_sql(char *input_sql) {
          {
             current_euqality_condition->value = ptr;
             current_euqality_condition->value_type = SINGLE;
-            current_condition_ptr->operand2 = current_euqality_condition;
 
             ptr = strtok(NULL, delim);
             step = stepWhereValueType;
@@ -913,11 +1000,56 @@ query_t* parse_sql(char *input_sql) {
             //   printf("NOT MATCH \n");
             // }
 
-            current_condition_ptr->operand2 = curent_like_condition;
-
             ptr = strtok(NULL, delim);
             step = stepWhereContinue;
 
+            break;
+         }
+         case stepWhereBetweenValue: 
+         {
+            char *between_value = malloc(strlen(ptr));
+            strcpy(between_value, ptr);
+
+            // remove '()'
+            if (between_value[0] == '(') 
+            {
+               between_value += 1;
+            }
+            if (between_value[strlen(between_value) - 1] == ')') 
+            {
+               between_value[strlen(between_value) - 1] = '\0';
+            }
+
+            // remove ''
+            if (between_value[0] == '\'') 
+            {
+               between_value += 1;
+            }
+            if (between_value[strlen(between_value) - 1] == '\'') 
+            {
+               between_value[strlen(between_value) - 1] = '\0';
+            }
+
+            if (current_between_condition->min_value == NULL) 
+            {
+               current_between_condition->min_value = ptr;
+               current_between_condition->min_value_type = SINGLE;
+            }
+            else if (current_between_condition->max_value == NULL) {
+               current_between_condition->max_value = ptr;
+               current_between_condition->max_value_type = SINGLE;
+            }
+
+            ptr = strtok(NULL, delim);
+            if (ptr != NULL) {
+               if (strcmp(ptr, "AND") == 0) {
+                  ptr = strtok(NULL, delim);
+                  step = stepWhereBetweenValue;
+               }
+               else {
+                  step = stepWhereValueType;
+               }
+            }
             break;
          }
          case stepWhereInValue: 
@@ -925,11 +1057,11 @@ query_t* parse_sql(char *input_sql) {
             char *in_value = malloc(strlen(ptr));
             strcpy(in_value, ptr);
 
+            // remove '()'
             if (in_value[0] == '(') 
             {
                in_value += 1;
             }
-
             if (in_value[strlen(in_value) - 1] == ')') 
             {
                in_value[strlen(in_value) - 1] = '\0';
@@ -940,7 +1072,6 @@ query_t* parse_sql(char *input_sql) {
             {
                in_value += 1;
             }
-
             if (in_value[strlen(in_value) - 1] == '\'') 
             {
                in_value[strlen(in_value) - 1] = '\0';
@@ -954,8 +1085,9 @@ query_t* parse_sql(char *input_sql) {
             {
                current_in_value_ptr->next = (list_node_t *) calloc(1, sizeof(list_node_t));
                current_in_value_ptr = current_in_value_ptr->next;
-               step = stepWhereInValue;
+
                ptr = strtok(NULL, delim);
+               step = stepWhereInValue;
             }
             else 
             {
@@ -969,6 +1101,10 @@ query_t* parse_sql(char *input_sql) {
             if (ptr != NULL) {
                if (strcmp(ptr, "+") == 0 || strcmp(ptr, "-") == 0 || strcmp(ptr, "*") == 0 || strcmp(ptr, "/") == 0) 
                {
+                  arithmetic_condition_t *athm_condition = (arithmetic_condition_t *) malloc(sizeof(arithmetic_condition_t));
+                  athm_condition->operator = ptr;
+                  ptr = strtok(NULL, delim);
+                  athm_condition->operand2 = ptr;
                   switch (current_condition_ptr->operator)
                   {
                      case EQ:
@@ -978,25 +1114,48 @@ query_t* parse_sql(char *input_sql) {
                      case LTE:
                      case NE:
                      {
-                        arithmetic_condition_t *athm_condition = (arithmetic_condition_t *) malloc(sizeof(arithmetic_condition_t));
                         athm_condition->operand1 = (char *) current_euqality_condition->value;
-                        athm_condition->operator = ptr;
-                        ptr = strtok(NULL, delim);
-                        athm_condition->operand2 = ptr;
-
+                        
                         current_euqality_condition->value = athm_condition;
                         current_euqality_condition->value_type = ARITHMETIC;
+
+                        ptr = strtok(NULL, delim);
+                        step = stepWhereContinue;
                         break;
                      }
-                     
-                     default:
+                     case BETWEEN:
+                     {
+                        if (current_between_condition->max_value == NULL) {
+                           athm_condition->operand1 = current_between_condition->min_value;
+
+                           current_between_condition->min_value = athm_condition;
+                           current_between_condition->min_value_type = ARITHMETIC;
+
+                           ptr = strtok(NULL, delim);
+                           if (strcmp(ptr, "AND") == 0) {
+                              ptr = strtok(NULL, delim);
+                              step = stepWhereBetweenValue;
+                           }
+                        }
+                        else 
+                        {
+                           athm_condition->operand1 = current_between_condition->max_value;
+
+                           current_between_condition->max_value = athm_condition;
+                           current_between_condition->max_value_type = ARITHMETIC;
+
+                           ptr = strtok(NULL, delim);
+                           step = stepWhereContinue;
+                        }
                         break;
+                     }
+                     default:
+                     {
+                        break;
+                     }
                   }
                }
-            }
-
-            ptr = strtok(NULL, delim);
-            step = stepWhereContinue;
+            }  
             break;
          }
          case stepWhereContinue: 
@@ -1078,6 +1237,8 @@ char* check_operator(operator_t op)
       return "!=";
    case LIKE:
       return "LIKE";
+   case BETWEEN:
+      return "BETWEEN";
    case IN:
       return "IN";
    default:
@@ -1095,12 +1256,63 @@ void print_where_condition(condition_t *cond)
    {
       strcpy(operand_print, ((like_condition_t *) cond->operand2)->ex);
    }
+   else if (strcmp(operator_to_print, "BETWEEN") == 0)
+   {
+      strcpy(operand_print, "(");
+      between_condition_t *between_condition = (between_condition_t *) cond->operand2;
+      switch (between_condition->min_value_type)
+      {
+         case SINGLE:
+         {
+            strcat(operand_print, (char *)(between_condition->min_value));
+            break;
+         }
+         case ARITHMETIC:
+         {
+            arithmetic_condition_t *athm_cond = (arithmetic_condition_t *)(between_condition->min_value);
+            strcat(operand_print, athm_cond->operand1);
+            strcat(operand_print, " ");
+            strcat(operand_print, athm_cond->operator);
+            strcat(operand_print, " ");
+            strcat(operand_print, athm_cond->operand2);
+            break;
+         }
+         default:
+         {
+            break;
+         }
+      }
+      strcat(operand_print, " AND ");
+      switch (between_condition->max_value_type)
+      {
+         case SINGLE:
+         {
+            strcat(operand_print, (char *)(between_condition->max_value));
+            break;
+         }
+         case ARITHMETIC:
+         {
+            arithmetic_condition_t *athm_cond = (arithmetic_condition_t *)(between_condition->max_value);
+            strcat(operand_print, athm_cond->operand1);
+            strcat(operand_print, " ");
+            strcat(operand_print, athm_cond->operator);
+            strcat(operand_print, " ");
+            strcat(operand_print, athm_cond->operand2);
+            break;
+         }
+         default:
+         {
+            break;
+         }
+      }
+      strcat(operand_print, ")");
+   }
    else if (strcmp(operator_to_print, "IN") == 0) 
    {
       strcpy(operand_print, "(");
       list_node_t *cur_node = ((in_condition_t *) cond->operand2)->match_ptr;
       while (cur_node != NULL)
-       {
+      {
          strcat(operand_print, cur_node->val);
          cur_node = cur_node->next;
 

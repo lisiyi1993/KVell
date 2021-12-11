@@ -27,6 +27,7 @@ typedef enum operator
    LTE,
    LIKE,
    IN,
+   BETWEEN,
 } operator_t;
 
 typedef enum value_type 
@@ -34,6 +35,13 @@ typedef enum value_type
    SINGLE,
    ARITHMETIC
 } value_t;
+
+typedef struct arithmetic_condition
+{
+   char *operand1;
+   char *operand2;
+   char *operator;
+} arithmetic_condition_t;
 
 typedef struct simple_condition
 {
@@ -52,12 +60,13 @@ typedef struct in_condition
    list_node_t *match_ptr;
 } in_condition_t;
 
-typedef struct arithmetic_condition
+typedef struct between_condition
 {
-   char *operand1;
-   char *operand2;
-   char *operator;
-} arithmetic_condition_t;
+   void *min_value;
+   value_t min_value_type;
+   void *max_value;
+   value_t max_value_type;
+} between_condition_t;
 
 typedef struct condition
 {
