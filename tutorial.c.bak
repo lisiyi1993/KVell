@@ -44,13 +44,33 @@ int main(int argc, char **argv) {
    char input_columns_type[][100] = {
       "INT", "INT", "INT", "INT", "INT", "INT", "INT", "INT", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING"
    };
+
+   create_sql_tables_columns();
    create_test_table(sizeof(input_columns)/100, input_columns, input_columns_type);
 
-   char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998%' AND DISCOUNT BETWEEN 0 AND 0 + 500";
-   // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE DISCOUNT BETWEEN 0 AND 0 + 999";
+   // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998%' AND DISCOUNT BETWEEN 0 AND 0 + 500";
+   char input_sql[] = "SELECT l_QUANTITY , l_TAX , l_DISCOUNT , l_RETURNFLAG , l_SHIPDATE FROM linenumber WHERE l_SHIPDATE LIKE '1998-11%'";
+   // char input_sql[] = "SELECT a_QUANTITY , a_TAX , a_DISCOUNT , a_RETURNFLAG FROM a_t1 , b_t2 WHERE a_DISCOUNT = b_DISCOUNT";
    query = parse_sql(input_sql);
    print_query_object(query);
    printf("\n");
+
+   printf("table columns object result\n");
+   hti iterator = ht_iterator(sql_tables_columns);
+   while (ht_next(&iterator)) {
+      char *selected_table = (char *) iterator.key;
+      hashset_t table_columns = (hashset_t) iterator.value;
+      hashset_itr_t iter = hashset_iterator(table_columns);
+
+      printf("%s ->", selected_table);
+      while(hashset_iterator_has_next(iter))
+      {
+         printf(" %s", (char *) hashset_iterator_value(iter));
+         hashset_iterator_next(iter);
+      }
+      hashset_destroy(table_columns);
+      printf("\n");
+   }
 
    int nb_disks, nb_workers_per_disk;
    declare_timer;
@@ -113,6 +133,7 @@ int main(int argc, char **argv) {
    }
    
    ht_destroy(test_table->column_map);
+   ht_destroy(sql_tables_columns);
    return 0;
 }
 

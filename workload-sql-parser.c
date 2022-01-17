@@ -6,6 +6,8 @@
 #include "workload-common.h"
 #include "workload-sql-parser.h"
 #include "hashtable.h"
+#include "hashset.h"
+#include "hashset_itr.h"
 #include <string.h>
 
 /*
@@ -54,6 +56,11 @@ void create_test_table(long num_columns, char input_columns[][100], char input_c
       // printf("%s and (%d)\n", input_columns[i], ci_get->index);
       // printf("done\n");
    }
+}
+
+void create_sql_tables_columns() 
+{
+   sql_tables_columns = ht_create();
 }
 
 /*
@@ -304,17 +311,17 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
       case LTE:
       case NE:
       {
-         simple_condition_t *simple_condition = (simple_condition_t *) condition->operand2;
-         switch (simple_condition->value_type)
+         comparison_condition_t *comparison_condition = (comparison_condition_t *) condition->operand2;
+         switch (comparison_condition->value_type)
          {
-            case SINGLE:
+            case CONSTANT:
             {
-               return compare_column_value(item, column_name, condition->operator, (char *) simple_condition->value, condition->not);
+               return compare_column_value(item, column_name, condition->operator, (char *) comparison_condition->value, condition->not);
                break;
             }
             case ARITHMETIC:
             {
-               arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *) simple_condition->value;
+               arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *) comparison_condition->value;
                char *expected_value = perform_arithmetic(arithmetic_condition);
                return compare_column_value(item, column_name, condition->operator, expected_value, condition->not);
                break;
@@ -330,12 +337,12 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
       {
          between_condition_t *old_between_condition = (between_condition_t *) condition->operand2;
          between_condition_t *new_between_condition = (between_condition_t *) calloc(1, sizeof(between_condition_t));
-         new_between_condition->min_value_type = SINGLE;
-         new_between_condition->max_value_type = SINGLE;
+         new_between_condition->min_value_type = CONSTANT;
+         new_between_condition->max_value_type = CONSTANT;
 
          switch (old_between_condition->min_value_type)
          {
-            case SINGLE:
+            case CONSTANT:
             {
                new_between_condition->min_value = old_between_condition->min_value;
                break;
@@ -352,7 +359,7 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
 
          switch (old_between_condition->max_value_type)
          {
-            case SINGLE:
+            case CONSTANT:
             {
                new_between_condition->max_value = old_between_condition->max_value;
                break;
@@ -576,16 +583,16 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
    else {
       bool valid_conds = true;
       // check if item respect the where condition
-      condition_t *current_condition = query->condition_ptr;
+      condition_t *current_condition = query->condition_ptr;      
       if (current_condition != NULL) {
-         bool b = evaluate_where_condition(item, current_condition->operand1, current_condition);
+         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition);
          valid_conds = valid_conds && b;
       }
 
       current_condition = query->and_condition_ptr;
       while (current_condition != NULL)
       {
-         bool b = evaluate_where_condition(item, current_condition->operand1, current_condition);
+         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition);
          valid_conds = valid_conds && b;
          if (!valid_conds) 
          {
@@ -597,7 +604,7 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       current_condition = query->or_condition_ptr;
       while (current_condition != NULL)
       {
-         bool b = evaluate_where_condition(item, current_condition->operand1, current_condition);
+         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition);
          valid_conds = valid_conds || b;
 
          if (valid_conds) {
@@ -749,11 +756,11 @@ typedef enum state
    stepWhereField,
    stepWhereOperator,
    stepWhereNot,
-   stepWhereEquality,
+   stepWhereComparison,
    stepWhereIn,
    stepWhereLike,
    stepWhereBetween,
-   stepWhereEqualityValue,
+   stepWhereComparisonValue,
    stepWhereLikeValue,
    stepWhereInValue,
    stepWhereBetweenValue,
@@ -798,19 +805,65 @@ void str_replace(char *target, const char *needle, const char *replacement)
    strcpy(target, buffer);
 }
 
+void parse_string(char *p, char *str, char *correspond_table) {
+    char *c;
+    char t[256];
+
+    int i=0;
+    for (c=p; *c!='\0'; c++) {
+        if (*c == '_') {
+            t[i] = '\0';
+            strcpy(correspond_table, t);
+            t[0] = 0;
+            i=0;
+        }
+        else {
+            t[i] = *c;
+            i++;
+        }
+    }
+
+    t[i] = '\0';
+    strcpy(str, t);
+}
+
+void add_str_to_set(hashset_t set, char *str)
+{
+   bool has_value = false;
+   hashset_itr_t iter = hashset_iterator(set);
+   
+   while(hashset_iterator_has_next(iter))
+   {
+      if (strcmp((char *) hashset_iterator_value(iter), str) == 0)
+      {
+         has_value = true;
+         break;
+      }
+      hashset_iterator_next(iter);
+   }
+
+   if (!has_value)
+   {
+      hashset_add(set, str);
+   }
+}
+
 query_t* parse_sql(char *input_sql) {
    char delim[] = " ";
    char* ptr = strtok(input_sql, delim);
 
-	query_t *query = (query_t *) calloc(1, sizeof(query_t));
+   query_t *query = (query_t *) calloc(1, sizeof(query_t));
 	state_t step = stepType;
+
+   table_name_t *current_table_name = NULL;
+
 	list_node_t *current_field_ptr = NULL;
 
 	condition_t *current_condition_ptr = NULL;
    condition_t *current_and_condition_ptr = NULL;
    condition_t *current_or_condition_ptr = NULL;
 
-   simple_condition_t *current_euqality_condition = NULL;
+   comparison_condition_t *current_comparison_condition = NULL;
    like_condition_t *curent_like_condition = NULL;
    between_condition_t *current_between_condition = NULL;
    in_condition_t *current_in_condition = NULL;
@@ -836,8 +889,24 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepSelectField: 
          {
-            current_field_ptr->val = ptr;
-            step = stepSelectFrom;
+            // current_field_ptr->val = ptr;
+            char *field = calloc(1, sizeof(char *));
+            char *correspond_table = calloc(1, sizeof(char *));
+            parse_string(ptr, field, correspond_table);
+
+            current_field_ptr->val = field;
+            if (strcmp(correspond_table, "") != 0)
+            {
+               current_field_ptr->key = correspond_table;
+
+               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table);
+               if (table_columns == NULL) {
+                  table_columns = hashset_create();
+                  hashset_add(table_columns, "");
+                  ht_set(sql_tables_columns, correspond_table, table_columns);
+               }
+               add_str_to_set(table_columns, field);
+            }
 
             ptr = strtok(NULL, delim);
             if (strcmp(ptr, ",") == 0) 
@@ -862,18 +931,32 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepSelectFrom: 
          {
+            query->table_name_ptr = (table_name_t *) calloc(1, sizeof(table_name_t));
+            current_table_name = query->table_name_ptr;
             step = stepSelectFromTable;
             ptr = strtok(NULL, delim);
             break;
          }
          case stepSelectFromTable: 
          {
-            query->table_name = ptr;
+            current_table_name->name = ptr;
+            current_table_name->alt_name[0] = ptr[0];
             ptr = strtok(NULL, delim);
 
-            if (ptr != NULL && strcmp(ptr, "WHERE") == 0)
+            if (ptr != NULL)
             {
-               step = stepWhere;
+               if (strcmp(ptr, "WHERE") == 0)
+               {
+                  step = stepWhere;
+               }
+               else if (strcmp(ptr, ",") == 0)
+               {
+                  current_table_name->next_table = (table_name_t *) calloc(1, sizeof(table_name_t));
+                  current_table_name = current_table_name->next_table;
+
+                  ptr = strtok(NULL, delim);
+                  step = stepSelectFromTable;
+               }
             }
 
             break;
@@ -893,8 +976,26 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereField: 
          {
-            current_condition_ptr->operand1 = ptr;
+            char *field = calloc(1, sizeof(char *));
+            char *correspond_table = calloc(1, sizeof(char *));
+            parse_string(ptr, field, correspond_table);
+
+            current_condition_ptr->operand1 = calloc(1, sizeof(field_operand_t));
+            current_condition_ptr->operand1->name = field;
             current_condition_ptr->not = false;
+
+            if (strcmp(correspond_table, "") != 0) 
+            {
+               current_condition_ptr->operand1->table = correspond_table;
+
+               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table);
+               if (table_columns == NULL) {
+                  table_columns = hashset_create();
+                  hashset_add(table_columns, "");
+                  ht_set(sql_tables_columns, correspond_table, table_columns);
+               }
+               add_str_to_set(table_columns, field);
+            }
 
             ptr = strtok(NULL, delim);
 
@@ -935,43 +1036,43 @@ query_t* parse_sql(char *input_sql) {
             else if (strcmp(ptr, "=") == 0) 
             {
                current_condition_ptr->operator = EQ;
-               step = stepWhereEquality;
+               step = stepWhereComparison;
             }
             else if (strcmp(ptr, ">") == 0)
             {
                current_condition_ptr->operator = GT;
-               step = stepWhereEquality;
+               step = stepWhereComparison;
             }
             else if (strcmp(ptr, "<") == 0)
             {
                current_condition_ptr->operator = LT;
-               step = stepWhereEquality;
+               step = stepWhereComparison;
             }
             else if (strcmp(ptr, ">=") == 0)
             {
                current_condition_ptr->operator = GTE;
-               step = stepWhereEquality;
+               step = stepWhereComparison;
             }
             else if (strcmp(ptr, "<=") == 0)
             {
                current_condition_ptr->operator = LTE;
-               step = stepWhereEquality;
+               step = stepWhereComparison;
             }
             else if (strcmp(ptr, "!=") == 0)
             {
                current_condition_ptr->operator = NE;
-               step = stepWhereEquality;
+               step = stepWhereComparison;
             }
 
             ptr = strtok(NULL, delim);
             break;
          }
-         case stepWhereEquality:
+         case stepWhereComparison:
          {
-            current_euqality_condition = (simple_condition_t *) calloc(1, sizeof(simple_condition_t));
+            current_comparison_condition = (comparison_condition_t *) calloc(1, sizeof(comparison_condition_t));
 
-            current_condition_ptr->operand2 = current_euqality_condition;
-            step = stepWhereEqualityValue;
+            current_condition_ptr->operand2 = current_comparison_condition;
+            step = stepWhereComparisonValue;
             break;
          }
          case stepWhereLike: 
@@ -1001,10 +1102,29 @@ query_t* parse_sql(char *input_sql) {
             step = stepWhereInValue;
             break;
          }
-         case stepWhereEqualityValue:
+         case stepWhereComparisonValue:
          {
-            current_euqality_condition->value = ptr;
-            current_euqality_condition->value_type = SINGLE;
+            char *value = calloc(1, sizeof(char *));
+            char *correspond_table = calloc(1, sizeof(char *));
+            parse_string(ptr, value, correspond_table);
+
+            current_comparison_condition->value = value;
+            if (strcmp(correspond_table, "") != 0)
+            {
+               current_comparison_condition->value_type = COLUMN_FIELD;
+               current_comparison_condition->table = correspond_table;
+               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table);
+               if (table_columns == NULL) {
+                  table_columns = hashset_create();
+                  hashset_add(table_columns, "");
+                  ht_set(sql_tables_columns, correspond_table, table_columns);
+               }
+               add_str_to_set(table_columns, value);
+            }
+            else 
+            {
+               current_comparison_condition->value_type = CONSTANT;
+            }
 
             ptr = strtok(NULL, delim);
             step = stepWhereValueType;
@@ -1012,7 +1132,7 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereLikeValue: 
          {
-            char *required_ex = malloc(strlen(ptr));
+            char *required_ex = calloc(1, strlen(ptr));
             strcpy(required_ex, ptr);
             required_ex[0] = '^';
             required_ex[strlen(required_ex) - 1] = '$';
@@ -1021,14 +1141,6 @@ query_t* parse_sql(char *input_sql) {
 
             regcomp(&(curent_like_condition->regex), required_ex, 0);
 
-            // int reti = regexec(&(curent_like_condition->regex), "abc", 0, NULL, 0);
-            // if (reti == 0) {
-            //   printf("MATCH \n");
-            // }
-            // else {
-            //   printf("NOT MATCH \n");
-            // }
-
             ptr = strtok(NULL, delim);
             step = stepWhereContinue;
 
@@ -1036,7 +1148,7 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereBetweenValue: 
          {
-            char *between_value = malloc(strlen(ptr));
+            char *between_value = calloc(1, strlen(ptr));
             strcpy(between_value, ptr);
 
             // remove '()'
@@ -1062,11 +1174,11 @@ query_t* parse_sql(char *input_sql) {
             if (current_between_condition->min_value == NULL) 
             {
                current_between_condition->min_value = ptr;
-               current_between_condition->min_value_type = SINGLE;
+               current_between_condition->min_value_type = CONSTANT;
             }
             else if (current_between_condition->max_value == NULL) {
                current_between_condition->max_value = ptr;
-               current_between_condition->max_value_type = SINGLE;
+               current_between_condition->max_value_type = CONSTANT;
             }
 
             ptr = strtok(NULL, delim);
@@ -1083,7 +1195,7 @@ query_t* parse_sql(char *input_sql) {
          }
          case stepWhereInValue: 
          {
-            char *in_value = malloc(strlen(ptr));
+            char *in_value = calloc(1, strlen(ptr));
             strcpy(in_value, ptr);
 
             // remove '()'
@@ -1142,10 +1254,10 @@ query_t* parse_sql(char *input_sql) {
                      case LTE:
                      case NE:
                      {
-                        athm_condition->operand1 = (char *) current_euqality_condition->value;
+                        athm_condition->operand1 = (char *) current_comparison_condition->value;
                         
-                        current_euqality_condition->value = athm_condition;
-                        current_euqality_condition->value_type = ARITHMETIC;
+                        current_comparison_condition->value = athm_condition;
+                        current_comparison_condition->value_type = ARITHMETIC;
 
                         ptr = strtok(NULL, delim);
                         step = stepWhereContinue;
@@ -1279,7 +1391,7 @@ char* check_operator(operator_t op)
 void print_where_condition(condition_t *cond) 
 {
    char *operator_to_print = check_operator(cond->operator);
-   char operand_print[512];
+   char *operand_print = calloc(1, sizeof(char *));
    if (strcmp(operator_to_print, "LIKE") == 0) 
    {
       strcpy(operand_print, ((like_condition_t *) cond->operand2)->ex);
@@ -1290,7 +1402,7 @@ void print_where_condition(condition_t *cond)
       between_condition_t *between_condition = (between_condition_t *) cond->operand2;
       switch (between_condition->min_value_type)
       {
-         case SINGLE:
+         case CONSTANT:
          {
             strcat(operand_print, (char *)(between_condition->min_value));
             break;
@@ -1313,7 +1425,7 @@ void print_where_condition(condition_t *cond)
       strcat(operand_print, " AND ");
       switch (between_condition->max_value_type)
       {
-         case SINGLE:
+         case CONSTANT:
          {
             strcat(operand_print, (char *)(between_condition->max_value));
             break;
@@ -1352,17 +1464,25 @@ void print_where_condition(condition_t *cond)
       strcat(operand_print, ")");
    }
    else {
-      simple_condition_t *equality_condition = (simple_condition_t *) cond->operand2;
-      switch (equality_condition->value_type)
+      comparison_condition_t *comparison_condition = (comparison_condition_t *) cond->operand2;
+      switch (comparison_condition->value_type)
       {
-         case SINGLE:
+         case CONSTANT:
          {
-            strcpy(operand_print, (char *)(equality_condition->value));
+            strcpy(operand_print, (char *)(comparison_condition->value));
+            break;
+         }
+         case COLUMN_FIELD:
+         {
+            printf("%s\n", comparison_condition->table);
+            strcpy(operand_print, comparison_condition->table);
+            strcat(operand_print, "_");
+            strcat(operand_print, comparison_condition->value);
             break;
          }
          case ARITHMETIC: 
          {
-            arithmetic_condition_t *athm_cond = (arithmetic_condition_t *)(equality_condition->value);
+            arithmetic_condition_t *athm_cond = (arithmetic_condition_t *)(comparison_condition->value);
             strcpy(operand_print, athm_cond->operand1);
             strcat(operand_print, " ");
             strcat(operand_print, athm_cond->operator);
@@ -1377,14 +1497,11 @@ void print_where_condition(condition_t *cond)
       }
    }
 
-   if (cond->not) 
-   {
-      printf("\"%s NOT %s %s\", ", cond->operand1, operator_to_print, operand_print);
-   }
-   else 
-   {
-      printf("\"%s %s %s\", ", cond->operand1, operator_to_print, operand_print);
-   }
+   char *not = cond->not ? "NOT" : "\b";
+   char *table = cond->operand1->table == NULL ? "" : cond->operand1->table;
+   char table_delim = cond->operand1->table == NULL ? '\0' : '_';
+   
+   printf("\"%s%c%s %s %s %s\", ", table, table_delim, cond->operand1->name, not, operator_to_print, operand_print);
 }
 
 
@@ -1399,12 +1516,20 @@ void print_query_object(query_t *query)
    printf("The select fields are ");
    while (current_field != NULL) 
    {
-      printf("\"%s\", ", current_field->val);
+      char *table = current_field->key == NULL ? "" : current_field->key;
+      char table_delim = current_field->key == NULL ? '\0' : '_';
+      printf("\"%s%c%s\", ", table, table_delim, current_field->val);
       current_field = current_field->next;
    }
    printf("\n");
 
-   printf("The tablename is \"%s\" \n", query->table_name);
+   table_name_t *current_table_name = query->table_name_ptr;
+   printf("The tablename are ");
+   while (current_table_name != NULL) {
+      printf("\"%s (%s)\", ", current_table_name->name, current_table_name->alt_name);
+      current_table_name = current_table_name->next_table;
+   }
+   printf("\n");
 
    condition_t *current_condition = query->condition_ptr;
    printf("The condition is ");

@@ -10,7 +10,7 @@ LDLIBS=-lm -lpthread -lstdc++
 
 INDEXES_OBJ=indexes/rbtree.o indexes/rax.o indexes/art.o indexes/btree.o indexes/pqueue.o
 MAIN_OBJ=main.o slab.o freelist.o ioengine.o pagecache.o stats.o random.o slabworker.o workload-common.o workload-ycsb.o workload-production.o utils.o in-memory-index.o transaction.o workload-transactions.o injectorqueue.o transaction-helpers.o workload-tpcc.o gc.o items.o workload-tpch.o workload-tpcch.o workload-scan.o hashtable.o ${INDEXES_OBJ}
-TUTORIAL_OBJ=tutorial.o slab.o freelist.o ioengine.o pagecache.o stats.o random.o slabworker.o workload-common.o workload-ycsb.o workload-production.o utils.o in-memory-index.o transaction.o workload-transactions.o injectorqueue.o transaction-helpers.o workload-tpcc.o gc.o items.o workload-tpch.o workload-tpcch.o workload-scan.o workload-sql-parser.o hashtable.o ${INDEXES_OBJ}
+TUTORIAL_OBJ=tutorial.o slab.o freelist.o ioengine.o pagecache.o stats.o random.o slabworker.o workload-common.o workload-ycsb.o workload-production.o utils.o in-memory-index.o transaction.o workload-transactions.o injectorqueue.o transaction-helpers.o workload-tpcc.o gc.o items.o workload-tpch.o workload-tpcch.o workload-scan.o workload-sql-parser.o hashtable.o hashset.o hashset_itr.o ${INDEXES_OBJ}
 MICROBENCH_OBJ=microbench.o random.o stats.o utils.o ${INDEXES_OBJ}
 BENCH_OBJ=benchcomponents.o pagecache.o random.o $(INDEXES_OBJ)
 

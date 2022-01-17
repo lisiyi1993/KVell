@@ -1,4 +1,6 @@
 #include "hashtable.h"
+#include "hashset.h"
+#include "hashset_itr.h"
 #include <regex.h>
 
 #ifndef WORKLOAD_TPCH
@@ -8,12 +10,17 @@
 
 size_t get_db_size_sql_parser(void);
 
-typedef struct node {
-   char* val;
-   struct node * next;
+ht *sql_tables_columns;
+
+typedef struct node 
+{
+   char *key;
+   char *val;
+   struct node *next;
 } list_node_t;
 
-typedef enum type {
+typedef enum type 
+{
    SELECT
 } type_t;
 
@@ -32,8 +39,9 @@ typedef enum operator
 
 typedef enum value_type 
 {
-   SINGLE,
-   ARITHMETIC
+   CONSTANT,
+   ARITHMETIC,
+   COLUMN_FIELD
 } value_t;
 
 typedef struct arithmetic_condition
@@ -43,11 +51,12 @@ typedef struct arithmetic_condition
    char *operator;
 } arithmetic_condition_t;
 
-typedef struct simple_condition
+typedef struct comparison_condition
 {
    void *value;
    value_t value_type;
-} simple_condition_t;
+   char *table;
+} comparison_condition_t;
 
 typedef struct like_condition
 {
@@ -68,19 +77,32 @@ typedef struct between_condition
    value_t max_value_type;
 } between_condition_t;
 
+typedef struct field_operand
+{
+   char *name;
+   char *table;
+} field_operand_t;
+
 typedef struct condition
 {
-   char *operand1;
+   field_operand_t *operand1;
    operator_t operator;
    void *operand2;
    struct condition *next_condition;
    bool not;
 } condition_t;
 
+typedef struct table_name
+{
+   char *name;
+   char alt_name[256];
+   struct table_name *next_table;
+} table_name_t;
+
 typedef struct query
 {
    type_t type;
-   char *table_name;
+   table_name_t *table_name_ptr;
    list_node_t *field_ptr;
    condition_t *condition_ptr;
    condition_t *and_condition_ptr;
@@ -113,5 +135,7 @@ struct table_struct *test_table;
 void print_query_object(query_t *query);
 
 void create_test_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
+
+void create_sql_tables_columns();
 
 #endif
