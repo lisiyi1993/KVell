@@ -27,10 +27,24 @@ enum column {
    ORDERKEY, PARTKEY, SUPPKEY, LINENUMBER, QUANTITY, EXTENDEDPRICE, DISCOUNT, TAX, RETURNFLAG, LINESTATUS, SHIPDATE, COMMITDATE, RECEIPTDATE, SHIPINSTRUCT, SHIPMODE, COMMENT,
 };
 
-void create_test_table(long num_columns, char input_columns[][100], char input_columns_type[][100]) {
-   test_table = calloc(1, sizeof(test_table));
-   test_table->name = "LINEITEM";
-   test_table->column_map = ht_create();
+void create_sql_tables_columns() 
+{
+   sql_tables_columns = ht_create();
+}
+
+void create_table_identifier_to_table_name()
+{
+   table_identifier_to_table_name = ht_create();
+}
+
+void create_lineitem_table(long num_columns, char input_columns[][100], char input_columns_type[][100]) 
+{
+   lineitem_table = (table_t *) calloc(1, sizeof(table_t));
+   lineitem_table->name = "lineitem";
+   lineitem_table->start_index = 0;
+   lineitem_table->end_index = NB_LINEITEMS;
+
+   lineitem_table->column_map = ht_create();
    for (size_t i = 0; i < num_columns; i++)
    {
       // int *index = malloc(sizeof(int));
@@ -39,7 +53,8 @@ void create_test_table(long num_columns, char input_columns[][100], char input_c
       struct column_info *ci = calloc(1, sizeof(ci));
       ci->index = i;
 
-      if (strcmp(input_columns_type[i], "INT") == 0) {
+      if (strcmp(input_columns_type[i], "INT") == 0) 
+      {
          ci->type = INT;
       }
       else if (strcmp(input_columns_type[i], "STRING") == 0)
@@ -50,7 +65,7 @@ void create_test_table(long num_columns, char input_columns[][100], char input_c
       // if (test_table->column_map == NULL) {
       //    printf("yes it is null\n");
       // }
-      ht_set(test_table->column_map, input_columns[i], ci);
+      ht_set(lineitem_table->column_map, input_columns[i], ci);
       // struct column_info *ci_get = ht_get(test_table->column_map, input_columns[i]);
       // printf("here \n");
       // printf("%s and (%d)\n", input_columns[i], ci_get->index);
@@ -58,49 +73,49 @@ void create_test_table(long num_columns, char input_columns[][100], char input_c
    }
 }
 
-void create_sql_tables_columns() 
+void create_orders_table(long num_columns, char input_columns[][100], char input_columns_type[][100]) 
 {
-   sql_tables_columns = ht_create();
+   orders_table = (table_t *) calloc(1, sizeof(table_t));
+   orders_table->name = "orders";
+   orders_table->start_index = NB_LINEITEMS - 1;
+   orders_table->end_index = NB_LINEITEMS + NB_ORDERS;
+
+   orders_table->column_map = ht_create();
+   for (size_t i = 0; i < num_columns; i++)
+   {
+      struct column_info *ci = calloc(1, sizeof(ci));
+      ci->index = i;
+
+      if (strcmp(input_columns_type[i], "INT") == 0) 
+      {
+         ci->type = INT;
+      }
+      else if (strcmp(input_columns_type[i], "STRING") == 0)
+      {
+         ci->type = STRING;
+      }
+
+      ht_set(orders_table->column_map, input_columns[i], ci);
+   }
 }
 
-/*
- * We want every DB insert to have a unique and identifiable key. These functions generate a unique key depending on the table, column and primary key(s) of a tuple.
- */
-struct sql_parser_key {
-   union {
-      long key;
-      struct {
-         unsigned long prim_key:60;
-         unsigned int table:4;
-      };
-   };
-} __attribute__((packed));
-
-long sql_parser_get_key_lineitem(long linenumber) {
-   struct sql_parser_key k = {
-      .table = LINEITEM,
-      .prim_key = linenumber
-   };
-   return k.key;
-}
-
-char *add_column_value(char *item, char *column_name, void *value) {
-   struct column_info *ci = ht_get(test_table->column_map, column_name);
+char *add_column_value(char *item, char *column_name, void *value, table_t *table) {
+   struct column_info *ci = ht_get(table->column_map, column_name);
    switch (ci->type)
    {
    case INT:
-      return add_shash_uint(item, *((int *) ht_get(test_table->column_map, column_name)), value, 1);
+      return add_shash_uint(item, *((int *) ht_get(table->column_map, column_name)), value, 1);
       break;
    case STRING:
-      return add_shash_specific_string(item, *((int *) ht_get(test_table->column_map, column_name)), value, 1);
+      return add_shash_specific_string(item, *((int *) ht_get(table->column_map, column_name)), value, 1);
       break;
    default:
       break;
    }
 }
 
-static char* get_column_string_value(char* item, char* column_name) {
-   struct column_info *ci = ht_get(test_table->column_map, column_name);
+static char* get_column_string_value(char* item, char* column_name, table_t *table) { 
+   struct column_info *ci = ht_get(table->column_map, column_name);
    
    char *tmp = malloc(256);
    switch (ci->type)
@@ -118,9 +133,9 @@ static char* get_column_string_value(char* item, char* column_name) {
    return tmp;
 }
 
-bool compare_column_value(char *item, char *column_name, operator_t operator, void *expected_value, bool not) {
-   struct column_info *ci = ht_get(test_table->column_map, column_name);
-   void *item_value = get_column_string_value(item, column_name);
+bool compare_column_value(char *item, char *column_name, operator_t operator, void *expected_value, bool not, table_t *table) {
+   struct column_info *ci = ht_get(lineitem_table->column_map, column_name);
+   void *item_value = get_column_string_value(item, column_name, table);
 
    bool res;
    switch (operator)
@@ -300,8 +315,8 @@ char* perform_arithmetic(arithmetic_condition_t *arithmetic_condition) {
    return result;
 }
 
-bool evaluate_where_condition(char *item, char *column_name, condition_t *condition) {
-   struct column_info *ci = ht_get(test_table->column_map, column_name);
+bool evaluate_where_condition(char *item, char *column_name, condition_t *condition, table_t *table) {
+   struct column_info *ci = ht_get(table->column_map, column_name);
    switch (condition->operator)
    {
       case EQ:
@@ -316,14 +331,14 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
          {
             case CONSTANT:
             {
-               return compare_column_value(item, column_name, condition->operator, (char *) comparison_condition->value, condition->not);
+               return compare_column_value(item, column_name, condition->operator, (char *) comparison_condition->value, condition->not, table);
                break;
             }
             case ARITHMETIC:
             {
                arithmetic_condition_t *arithmetic_condition = (arithmetic_condition_t *) comparison_condition->value;
                char *expected_value = perform_arithmetic(arithmetic_condition);
-               return compare_column_value(item, column_name, condition->operator, expected_value, condition->not);
+               return compare_column_value(item, column_name, condition->operator, expected_value, condition->not, table);
                break;
             }
             default:
@@ -374,11 +389,11 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
                break;
          }
 
-         return compare_column_value(item, column_name, condition->operator, new_between_condition, condition->not);
+         return compare_column_value(item, column_name, condition->operator, new_between_condition, condition->not, table);
       }
       default:
       {
-         return compare_column_value(item, column_name, condition->operator, condition->operand2, condition->not);
+         return compare_column_value(item, column_name, condition->operator, condition->operand2, condition->not, table);
          break;
       }
    }
@@ -389,8 +404,43 @@ bool evaluate_where_condition(char *item, char *column_name, condition_t *condit
  * Generate all the elements that will be stored in the DB
  */
 
+/*
+ * We want every DB insert to have a unique and identifiable key. These functions generate a unique key depending on the table, column and primary key(s) of a tuple.
+ */
+struct sql_parser_key {
+   union {
+      long key;
+      struct {
+         unsigned long prim_key:60;
+         unsigned int table:4;
+      };
+   };
+} __attribute__((packed));
+
+long sql_parser_get_key_lineitem(long linenumber) {
+   struct sql_parser_key k = {
+      .table = LINEITEM,
+      .prim_key = linenumber
+   };
+   return k.key;
+}
+
+long sql_parser_get_key_order(long order) {
+   struct sql_parser_key k = {
+      .table = ORDERS,
+      .prim_key = order
+   };
+   return k.key;
+}
+
 static char *sql_parser_lineitem(uint64_t uid) {
    uint64_t key = sql_parser_get_key_lineitem(uid);
+   char *item = create_shash(key);
+   return item;
+}
+
+static char *sql_parser_order(uint64_t uid) {
+   uint64_t key = sql_parser_get_key_order(uid);
    char *item = create_shash(key);
    return item;
 }
@@ -399,46 +449,71 @@ static char *sql_parser_lineitem(uint64_t uid) {
  * Function called by the workload-common interface. uid goes from 0 to the number of elements in the DB.
  */
 static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
+   // printf("create_unique_item_sql_parser\n");
+   // printf("uid=%d, max_uid=%d\n", uid, max_uid);
    if(uid == 0)
       assert(max_uid == get_db_size_sql_parser()); // set .nb_items_in_db = get_db_size_sql_parser() in main.c otherwise the DB will be partially populated
 
-   if(uid < NB_LINEITEMS) 
+   if (uid < NB_LINEITEMS) 
    {
       char *item = sql_parser_lineitem(uid);
 
-      item = add_column_value(item, "LINENUMBER", uid);
-      item = add_column_value(item, "QUANTITY", uid * 10);
-      item = add_column_value(item, "DISCOUNT", rand_between(100, 999));
-      item = add_column_value(item, "TAX", rand_between(100, 999));
+      item = add_column_value(item, "TABLE", "lineitem", lineitem_table);
+      item = add_column_value(item, "ORDERKEY", uid % (NB_ORDERS + 2), lineitem_table);
+      item = add_column_value(item, "LINENUMBER", uid, lineitem_table);
+      item = add_column_value(item, "QUANTITY", uid * 10, lineitem_table);
+      item = add_column_value(item, "DISCOUNT", rand_between(100, 999), lineitem_table);
+      item = add_column_value(item, "TAX", rand_between(100, 999), lineitem_table);
 
       if (uid % 3 == 0) {
-         item = add_column_value(item, "SHIPDATE", "1998-09-03");
-         item = add_column_value(item, "RETURNFLAG", "A");
-         item = add_column_value(item, "LINESTATUS", "1");
+         item = add_column_value(item, "SHIPDATE", "1998-09-03", lineitem_table);
+         item = add_column_value(item, "RETURNFLAG", "A", lineitem_table);
+         item = add_column_value(item, "LINESTATUS", "1", lineitem_table);
       }
       else if (uid % 3 == 1) {
-         item = add_column_value(item, "SHIPDATE", "1998-09-04");
-         item = add_column_value(item, "RETURNFLAG", "B");
-         item = add_column_value(item, "LINESTATUS", "2");
+         item = add_column_value(item, "SHIPDATE", "1998-09-04", lineitem_table);
+         item = add_column_value(item, "RETURNFLAG", "B", lineitem_table);
+         item = add_column_value(item, "LINESTATUS", "2", lineitem_table);
       }
       else {
-         item = add_column_value(item, "SHIPDATE", "1998-11-05");
-         item = add_column_value(item, "RETURNFLAG", "C");
-         item = add_column_value(item, "LINESTATUS", "3");
+         item = add_column_value(item, "SHIPDATE", "1998-11-05", lineitem_table);
+         item = add_column_value(item, "RETURNFLAG", "C", lineitem_table);
+         item = add_column_value(item, "LINESTATUS", "3", lineitem_table);
       }
-
+      
+      // dump_shash(item);
       return item;
       // return sql_parser_lineitem(uid);
    }
-   uid -= NB_LINEITEMS;
+   else if (NB_LINEITEMS <= uid && uid < NB_LINEITEMS + NB_ORDERS)
+   {
+      // char *item = sql_parser_lineitem(uid);
+      char *item = sql_parser_order(uid);
+      item = add_column_value(item, "TABLE", "orders", orders_table);
+      item = add_column_value(item, "ORDERKEY", uid % NB_ORDERS, orders_table);
+      item = add_column_value(item, "ORDERDATE", "1998-08-01", orders_table);
 
+      if (uid % 2 == 0)
+      {
+         item = add_column_value(item, "SHIPPRIORITY", "Y", orders_table);
+      }
+      else
+      {
+         item = add_column_value(item, "SHIPPRIORITY", "N", orders_table);
+      }
+
+      // dump_shash(item);
+      return item;
+   }
+   // uid -= NB_LINEITEMS;
+
+   printf("return null\n");
    return NULL;
 }
 
 
 size_t get_db_size_sql_parser(void) {
-   return NB_LINEITEMS
-      ;
+   return NB_LINEITEMS + NB_ORDERS;
 }
 
 
@@ -547,11 +622,11 @@ static void scan_map(struct slab_callback *cb, void *item) {
    } 
    else {
       // printf("item value is %ld \n", get_shash_uint(item, 3));
-      long item_uid = get_shash_uint(item, *((int *) ht_get(test_table->column_map, "LINENUMBER")));
-      long item_quantity = get_shash_uint(item, *((int *) ht_get(test_table->column_map, "QUANTITY")));
-      char* item_returnflag = get_shash_string(item, *((int *) ht_get(test_table->column_map, "RETURNFLAG")));
-      char* item_linestatus = get_shash_string(item, *((int *) ht_get(test_table->column_map, "LINESTATUS")));
-      char* item_shipdate = get_shash_string(item, *((int *) ht_get(test_table->column_map, "SHIPDATE")));
+      long item_uid = get_shash_uint(item, *((int *) ht_get(lineitem_table->column_map, "LINENUMBER")));
+      long item_quantity = get_shash_uint(item, *((int *) ht_get(lineitem_table->column_map, "QUANTITY")));
+      char* item_returnflag = get_shash_string(item, *((int *) ht_get(lineitem_table->column_map, "RETURNFLAG")));
+      char* item_linestatus = get_shash_string(item, *((int *) ht_get(lineitem_table->column_map, "LINESTATUS")));
+      char* item_shipdate = get_shash_string(item, *((int *) ht_get(lineitem_table->column_map, "SHIPDATE")));
 
       if (strcmp(item_shipdate, "1998-09-04") < 0 || strcmp(item_shipdate, "1998-09-04") == 0) {         
          char *key;
@@ -581,18 +656,37 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       p->done = 1;
    }
    else {
+      // printf("-----------------------------------\n");
+      // dump_shash(item);
+
+      if (query == NULL)
+      {
+         return;
+      }
+
+      table_t *table_info = lineitem_table;
+      if (strcmp(query->table_name_ptr->name, "lineitem") == 0)
+      {
+         table_info = lineitem_table;
+      }
+      else if (strcmp(query->table_name_ptr->name, "orders") == 0)
+      {
+         table_info = orders_table;
+      }
+
       bool valid_conds = true;
       // check if item respect the where condition
       condition_t *current_condition = query->condition_ptr;      
       if (current_condition != NULL) {
-         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition);
+         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition, table_info);
          valid_conds = valid_conds && b;
       }
 
+      // printf("pass the first condition check \n");
       current_condition = query->and_condition_ptr;
       while (current_condition != NULL)
       {
-         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition);
+         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition, table_info);
          valid_conds = valid_conds && b;
          if (!valid_conds) 
          {
@@ -601,10 +695,11 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
          current_condition = current_condition->next_condition;
       }
 
+      // printf("pass the and condition check \n");
       current_condition = query->or_condition_ptr;
       while (current_condition != NULL)
       {
-         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition);
+         bool b = evaluate_where_condition(item, current_condition->operand1->name, current_condition, table_info);
          valid_conds = valid_conds || b;
 
          if (valid_conds) {
@@ -614,28 +709,79 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
          current_condition = current_condition->next_condition;
       }
 
+      // printf("pass the or condition check \n");
       if (!valid_conds) {
          return;
       }
 
       // item pass the conditions check
-      char *key_string = get_column_string_value(item, "LINENUMBER");
-
-      list_node_t* current_field = query->field_ptr;
-      char *value = malloc(1024);
-      while (current_field != NULL)
+      char *item_table = get_shash_string(item, 0);
+      if (strcmp(item_table, "lineitem") == 0) 
       {
-         strcat(value, current_field->val);
-         strcat(value, ": ");
-         strcat(value, get_column_string_value(item, current_field->val));
-         strcat(value, ", ");
-         
-         current_field = current_field->next;
-      }
-      // printf("%s", value);
-      // printf("\n");
+         char *key_string = get_column_string_value(item, "LINENUMBER", lineitem_table);
 
-      ht_set(p->map, key_string, value);
+         list_node_t* current_field = query->field_ptr;
+         char *value = malloc(1024);
+         while (current_field != NULL)
+         {
+            strcat(value, current_field->val);
+            strcat(value, ": ");
+            strcat(value, get_column_string_value(item, current_field->val, lineitem_table));
+            strcat(value, ", ");
+            
+            current_field = current_field->next;
+         }
+         // printf("%s", value);
+         // printf("\n");
+
+         ht_set(p->map, key_string, value);
+
+         if (lineitem_result_list == NULL)
+         {
+            lineitem_result_list = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            cur_lineitem_result_item = lineitem_result_list;
+         }
+         else 
+         {
+            cur_lineitem_result_item->next = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            cur_lineitem_result_item = cur_lineitem_result_item->next;
+         }
+         cur_lineitem_result_item->item = item;
+      }
+      else if (strcmp(item_table, "orders") == 0) 
+      {
+         char *key_string = get_column_string_value(item, "ORDERKEY", table_info);
+
+         list_node_t* current_field = query->field_ptr;
+         char *value = malloc(1024);
+         while (current_field != NULL)
+         {
+            strcat(value, current_field->val);
+            strcat(value, ": ");
+            strcat(value, get_column_string_value(item, current_field->val, table_info));
+            strcat(value, ", ");
+            
+            current_field = current_field->next;
+         }
+         // printf("%s", value);
+         // printf("\n");
+
+         ht_set(p->map, key_string, value);
+         
+         if (orders_result_list == NULL)
+         {
+            orders_result_list = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            cur_orders_result_item = orders_result_list;
+         }
+         else
+         {
+            cur_orders_result_item->next = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            cur_orders_result_item = cur_orders_result_item->next;
+         }
+
+         cur_orders_result_item->item = item;
+      }
+      
    }
 }
 
@@ -698,12 +844,225 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
    declare_periodic_count;
    size_t nb_queries = 0;
 
-   _p.scan_cb = start_background_scan(uid, w, q, sql_parser_get_key_lineitem(0), sql_parser_get_key_lineitem(NB_LINEITEMS));
+   // query = ht_get(sub_queries_map, "l");
+   // print_query_object(query);
+   // _p.scan_cb = start_background_scan(uid, w, q, sql_parser_get_key_lineitem(lineitem_table->start_index), sql_parser_get_key_lineitem(lineitem_table->end_index));
+   
+   // do {
+   //    // periodic_count(1000, "TRANS Load Injector %d [failure rate = %lu%%] [snapshot size %lu] [running transactions %lu] [%lu scans done - %d full] [%lu queries done]", uid, failed_trans*100/nb_commits_done, get_snapshot_size(), get_nb_running_transactions(), scan_progress(_p.scan_cb), glob_nb_scans_done, nb_queries);
+   //    do_injector_bg_work(w, q, &_p);
+   // } while(pending_work() || injector_has_pending_work(q));
 
-   do {
-      // periodic_count(1000, "TRANS Load Injector %d [failure rate = %lu%%] [snapshot size %lu] [running transactions %lu] [%lu scans done - %d full] [%lu queries done]", uid, failed_trans*100/nb_commits_done, get_snapshot_size(), get_nb_running_transactions(), scan_progress(_p.scan_cb), glob_nb_scans_done, nb_queries);
-      do_injector_bg_work(w, q, &_p);
-   } while(pending_work() || injector_has_pending_work(q));
+   // query = ht_get(sub_queries_map, "o");
+   // print_query_object(query);
+   // // _p.scan_cb = start_background_scan(uid, w, q, sql_parser_get_key_lineitem(NB_LINEITEMS), sql_parser_get_key_lineitem(NB_LINEITEMS + NB_ORDERS));
+   // _p.scan_cb = start_background_scan(uid, w, q, sql_parser_get_key_order(orders_table->start_index), sql_parser_get_key_order(orders_table->end_index));
+
+   // do {
+   //    // periodic_count(1000, "TRANS Load Injector %d [failure rate = %lu%%] [snapshot size %lu] [running transactions %lu] [%lu scans done - %d full] [%lu queries done]", uid, failed_trans*100/nb_commits_done, get_snapshot_size(), get_nb_running_transactions(), scan_progress(_p.scan_cb), glob_nb_scans_done, nb_queries);
+   //    do_injector_bg_work(w, q, &_p);
+   // } while(pending_work() || injector_has_pending_work(q));
+
+   hti sub_queries_map_iterator = ht_iterator(sub_queries_map);
+   while (ht_next(&sub_queries_map_iterator))
+   {
+      char *table_identifier = (char *) sub_queries_map_iterator.key;
+      query = (query_t *) sub_queries_map_iterator.value;
+      
+      printf("\nThe query object for table %s\n", table_identifier);
+      print_query_object(query);
+
+      long start_index = 0;
+      long end_index = 0;
+      if (strcmp(query->table_name_ptr->name, "lineitem") == 0)
+      {
+         start_index = sql_parser_get_key_lineitem(lineitem_table->start_index);
+         end_index = sql_parser_get_key_lineitem(lineitem_table->end_index);
+      }
+      else if (strcmp(query->table_name_ptr->name, "orders") == 0)
+      {
+         start_index = sql_parser_get_key_order(orders_table->start_index);
+         end_index = sql_parser_get_key_order(orders_table->end_index);
+      }
+
+      _p.scan_cb = start_background_scan(uid, w, q, start_index, end_index);
+   
+      do {
+         // periodic_count(1000, "TRANS Load Injector %d [failure rate = %lu%%] [snapshot size %lu] [running transactions %lu] [%lu scans done - %d full] [%lu queries done]", uid, failed_trans*100/nb_commits_done, get_snapshot_size(), get_nb_running_transactions(), scan_progress(_p.scan_cb), glob_nb_scans_done, nb_queries);
+         do_injector_bg_work(w, q, &_p);
+      } while(pending_work() || injector_has_pending_work(q));
+   }
+
+   condition_t *condition = origin_query->condition_ptr;
+   while (condition != NULL)
+   {
+      if (condition->is_join_condition)
+      {
+         switch (condition->operator)
+         {
+            case EQ:
+            case NE:
+            case GT:
+            case LT:
+            case GTE:
+            case LTE:
+            {
+               field_operand_t *field_operand = condition->operand1;
+               comparison_condition_t *comparison_condition = (comparison_condition_t *) condition->operand2;
+
+               char *table1_name = ht_get(table_identifier_to_table_name, field_operand->table_identifier);
+               char *table2_name = ht_get(table_identifier_to_table_name, comparison_condition->table);
+
+               char *field1_name = field_operand->name;
+               char *field2_name = (char *) comparison_condition->value;
+
+               sql_result_node *cur1_result_node;
+               table_t *table1;
+               if (strcmp(table1_name, "lineitem") == 0)
+               {
+                  cur1_result_node = lineitem_result_list;
+                  table1 = lineitem_table;
+               }
+               else if (strcmp(table1_name, "orders") == 0)
+               {
+                  cur1_result_node = orders_result_list;
+                  table1 = orders_table;
+               }
+               while (cur1_result_node != NULL)
+               {
+                  char *value1 = get_column_string_value(cur1_result_node->item, field1_name, table1);
+                  // printf("-----------------------------------\n");
+                  // printf("Finding value1 being: %s\n", value1);
+
+                  sql_result_node *cur2_result_node;
+                  table_t *table2;
+                  if (strcmp(table2_name, "lineitem") == 0)
+                  {
+                     cur2_result_node = lineitem_result_list;
+                     table2 = lineitem_table;
+                  }
+                  else if (strcmp(table2_name, "orders") == 0)
+                  {
+                     cur2_result_node = orders_result_list;
+                     table2 = orders_table;
+                  }
+                  
+                  while (cur2_result_node != NULL)
+                  {
+                     char *value2 = get_column_string_value(cur2_result_node->item, field2_name, table2);
+                     bool valid = false;
+                     switch (condition->operator)
+                     {
+                     case EQ:
+                        if (strcmp(value1, value2) == 0) 
+                        {
+                           valid = true;
+                        }
+                        break;
+                     case NE:
+                        if (strcmp(value1, value2) != 0) 
+                        {
+                           valid = true;
+                        }
+                        break;
+                     case GT:
+                        if (strcmp(value1, value2) > 0) 
+                        {
+                           valid = true;
+                        }
+                        break;
+                     case LT:
+                        if (strcmp(value1, value2) < 0) 
+                        {
+                           valid = true;
+                        }
+                        break;
+                     case GTE:
+                        if (strcmp(value1, value2) >= 0) 
+                        {
+                           valid = true;
+                        }
+                        break;
+                     case LTE:
+                        if (strcmp(value1, value2) < 0) 
+                        {
+                           valid = true;
+                        }
+                        break;
+                     default:
+                        break;
+                     }
+
+                     if (valid)
+                     {
+                        // printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+                        // printf("item 1 match with item 2\n");
+                        // dump_shash(cur2_result_node->item);
+                        list_node_t *cur_field_ptr = origin_query->field_ptr;
+                        while (cur_field_ptr != NULL)
+                        {
+                           if (strcmp(cur_field_ptr->key, field_operand->table_identifier) == 0)
+                           {
+                              char *value1 = get_column_string_value(cur1_result_node->item, cur_field_ptr->val, table1);
+                              printf("%s: %s, ", cur_field_ptr->val, value1);
+                           }
+                           else if (strcmp(cur_field_ptr->key, comparison_condition->table) == 0)
+                           {
+                              char *value2 = get_column_string_value(cur2_result_node->item, cur_field_ptr->val, table2);
+                              printf("%s: %s, ", cur_field_ptr->val, value2);
+                           }
+                           cur_field_ptr = cur_field_ptr->next;
+                        }
+                        printf("\n");
+                     }
+                     cur2_result_node = cur2_result_node->next;
+                  }
+
+                  cur1_result_node = cur1_result_node->next;
+               }
+            
+               break;
+            }
+            default:
+            {
+               break;
+            }  
+         }
+      }
+
+      condition = condition->next_condition;
+   }
+
+   // cur_orders_result_item = orders_result_list;
+   // while (cur_orders_result_item != NULL)
+   // {
+   //    char *order_order_key = get_column_string_value(cur_orders_result_item->item, "ORDERKEY", orders_table);
+   //    printf("-----------------------------------\n");
+   //    printf("Finding lineitems with orderkey: %s\n", order_order_key);
+
+   //    cur_lineitem_result_item = lineitem_result_list;
+   //    while (cur_lineitem_result_item != NULL)
+   //    {
+   //       char *lineitem_order_key = get_column_string_value(cur_lineitem_result_item->item, "ORDERKEY", lineitem_table);
+   //       if (strcmp(order_order_key, lineitem_order_key) == 0)
+   //       {
+   //          printf("LINENUMBER: %s ", get_column_string_value(cur_lineitem_result_item->item, "LINENUMBER", lineitem_table));
+   //          printf("ORDERKEY: %s", get_column_string_value(cur_lineitem_result_item->item, "ORDERKEY", lineitem_table));
+   //          printf("\n");
+   //       }
+   //       cur_lineitem_result_item = cur_lineitem_result_item->next;
+   //    }
+   //    cur_orders_result_item = cur_orders_result_item->next;
+   // }
+   
+   // while (cur_lineitem_result_item != NULL) {
+   //    char *value = get_column_string_value(cur_lineitem_result_item->item, "ORDERKEY", lineitem_table);
+
+   //    cur_orders_result_item = orders_result_list;
+   //    printf("-------------------------\n");
+   //    printf("LINENUMBER: %s\n", value);
+   //    cur_lineitem_result_item = cur_lineitem_result_item->next;
+   // }
 }
 
 /* Generic interface */
@@ -805,7 +1164,7 @@ void str_replace(char *target, const char *needle, const char *replacement)
    strcpy(target, buffer);
 }
 
-void parse_string(char *p, char *str, char *correspond_table) {
+void parse_string(char *p, char *str, char *correspond_table_identifier) {
     char *c;
     char t[256];
 
@@ -813,7 +1172,7 @@ void parse_string(char *p, char *str, char *correspond_table) {
     for (c=p; *c!='\0'; c++) {
         if (*c == '_') {
             t[i] = '\0';
-            strcpy(correspond_table, t);
+            strcpy(correspond_table_identifier, t);
             t[0] = 0;
             i=0;
         }
@@ -891,19 +1250,18 @@ query_t* parse_sql(char *input_sql) {
          {
             // current_field_ptr->val = ptr;
             char *field = calloc(1, sizeof(char *));
-            char *correspond_table = calloc(1, sizeof(char *));
-            parse_string(ptr, field, correspond_table);
+            char *correspond_table_identifier = calloc(1, sizeof(char *));
+            parse_string(ptr, field, correspond_table_identifier);
 
             current_field_ptr->val = field;
-            if (strcmp(correspond_table, "") != 0)
+            if (strcmp(correspond_table_identifier, "") != 0)
             {
-               current_field_ptr->key = correspond_table;
+               current_field_ptr->key = correspond_table_identifier;
 
-               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table);
+               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table_identifier);
                if (table_columns == NULL) {
                   table_columns = hashset_create();
-                  hashset_add(table_columns, "");
-                  ht_set(sql_tables_columns, correspond_table, table_columns);
+                  ht_set(sql_tables_columns, correspond_table_identifier, table_columns);
                }
                add_str_to_set(table_columns, field);
             }
@@ -940,7 +1298,9 @@ query_t* parse_sql(char *input_sql) {
          case stepSelectFromTable: 
          {
             current_table_name->name = ptr;
-            current_table_name->alt_name[0] = ptr[0];
+            current_table_name->identifier[0] = ptr[0];
+            ht_set(table_identifier_to_table_name, current_table_name->identifier, current_table_name->name);
+
             ptr = strtok(NULL, delim);
 
             if (ptr != NULL)
@@ -977,22 +1337,20 @@ query_t* parse_sql(char *input_sql) {
          case stepWhereField: 
          {
             char *field = calloc(1, sizeof(char *));
-            char *correspond_table = calloc(1, sizeof(char *));
-            parse_string(ptr, field, correspond_table);
+            char *correspond_table_identifier = calloc(1, sizeof(char *));
+            parse_string(ptr, field, correspond_table_identifier);
 
             current_condition_ptr->operand1 = calloc(1, sizeof(field_operand_t));
             current_condition_ptr->operand1->name = field;
-            current_condition_ptr->not = false;
 
-            if (strcmp(correspond_table, "") != 0) 
+            if (strcmp(correspond_table_identifier, "") != 0) 
             {
-               current_condition_ptr->operand1->table = correspond_table;
+               current_condition_ptr->operand1->table_identifier = correspond_table_identifier;
 
-               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table);
+               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table_identifier);
                if (table_columns == NULL) {
                   table_columns = hashset_create();
-                  hashset_add(table_columns, "");
-                  ht_set(sql_tables_columns, correspond_table, table_columns);
+                  ht_set(sql_tables_columns, correspond_table_identifier, table_columns);
                }
                add_str_to_set(table_columns, field);
             }
@@ -1105,19 +1463,19 @@ query_t* parse_sql(char *input_sql) {
          case stepWhereComparisonValue:
          {
             char *value = calloc(1, sizeof(char *));
-            char *correspond_table = calloc(1, sizeof(char *));
-            parse_string(ptr, value, correspond_table);
+            char *correspond_table_identifier = calloc(1, sizeof(char *));
+            parse_string(ptr, value, correspond_table_identifier);
 
             current_comparison_condition->value = value;
-            if (strcmp(correspond_table, "") != 0)
+            if (strcmp(correspond_table_identifier, "") != 0)
             {
+               current_condition_ptr->is_join_condition = true;
                current_comparison_condition->value_type = COLUMN_FIELD;
-               current_comparison_condition->table = correspond_table;
-               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table);
+               current_comparison_condition->table = correspond_table_identifier;
+               hashset_t table_columns = (hashset_t) ht_get(sql_tables_columns, correspond_table_identifier);
                if (table_columns == NULL) {
                   table_columns = hashset_create();
-                  hashset_add(table_columns, "");
-                  ht_set(sql_tables_columns, correspond_table, table_columns);
+                  ht_set(sql_tables_columns, correspond_table_identifier, table_columns);
                }
                add_str_to_set(table_columns, value);
             }
@@ -1474,7 +1832,6 @@ void print_where_condition(condition_t *cond)
          }
          case COLUMN_FIELD:
          {
-            printf("%s\n", comparison_condition->table);
             strcpy(operand_print, comparison_condition->table);
             strcat(operand_print, "_");
             strcat(operand_print, comparison_condition->value);
@@ -1498,8 +1855,8 @@ void print_where_condition(condition_t *cond)
    }
 
    char *not = cond->not ? "NOT" : "\b";
-   char *table = cond->operand1->table == NULL ? "" : cond->operand1->table;
-   char table_delim = cond->operand1->table == NULL ? '\0' : '_';
+   char *table = cond->operand1->table_identifier == NULL ? "" : cond->operand1->table_identifier;
+   char table_delim = cond->operand1->table_identifier == NULL ? '\0' : '_';
    
    printf("\"%s%c%s %s %s %s\", ", table, table_delim, cond->operand1->name, not, operator_to_print, operand_print);
 }
@@ -1526,7 +1883,7 @@ void print_query_object(query_t *query)
    table_name_t *current_table_name = query->table_name_ptr;
    printf("The tablename are ");
    while (current_table_name != NULL) {
-      printf("\"%s (%s)\", ", current_table_name->name, current_table_name->alt_name);
+      printf("\"%s (%s)\", ", current_table_name->name, current_table_name->identifier);
       current_table_name = current_table_name->next_table;
    }
    printf("\n");

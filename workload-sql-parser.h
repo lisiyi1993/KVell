@@ -6,11 +6,20 @@
 #ifndef WORKLOAD_TPCH
 #define WORKLOAD_TPCH
 
-#define NB_LINEITEMS 10
+
+#define NB_LINEITEMS 15
+#define NB_ORDERS 3
 
 size_t get_db_size_sql_parser(void);
 
 ht *sql_tables_columns;
+ht *table_identifier_to_table_name;
+
+typedef struct result_node
+{
+   char *item;
+   struct result_node *next;
+} sql_result_node;
 
 typedef struct node 
 {
@@ -80,7 +89,7 @@ typedef struct between_condition
 typedef struct field_operand
 {
    char *name;
-   char *table;
+   char *table_identifier;
 } field_operand_t;
 
 typedef struct condition
@@ -90,12 +99,13 @@ typedef struct condition
    void *operand2;
    struct condition *next_condition;
    bool not;
+   bool is_join_condition;
 } condition_t;
 
 typedef struct table_name
 {
    char *name;
-   char alt_name[256];
+   char identifier[256];
    struct table_name *next_table;
 } table_name_t;
 
@@ -109,10 +119,12 @@ typedef struct query
    condition_t *or_condition_ptr;
 } query_t;
 
-struct table_struct {
+typedef struct table_struct {
    char *name;
    ht* column_map;
-};
+   int start_index;
+   int end_index;
+} table_t;
 
 typedef enum {
    INT, 
@@ -128,14 +140,30 @@ struct column_info
 
 query_t* parse_sql(char *ptr);
 
+query_t* origin_query;
 query_t* query;
 
-struct table_struct *test_table;
+query_t *sub_query_list[2];
+ht *sub_queries_map;
+
+table_t *lineitem_table;
+
+table_t *orders_table;
+
+sql_result_node *lineitem_result_list;
+sql_result_node *cur_lineitem_result_item;
+
+sql_result_node *orders_result_list;
+sql_result_node *cur_orders_result_item;
 
 void print_query_object(query_t *query);
 
-void create_test_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
+void create_lineitem_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
+
+void create_orders_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
 
 void create_sql_tables_columns();
+
+void create_table_identifier_to_table_name();
 
 #endif
