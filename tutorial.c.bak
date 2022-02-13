@@ -58,8 +58,9 @@ int main(int argc, char **argv) {
    create_orders_table(sizeof(orders_columns)/100, orders_columns, orders_columns_type);
 
    // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998%' AND DISCOUNT BETWEEN 0 AND 0 + 500";
-   char input_sql[] = "SELECT l_ORDERKEY , l_TAX , l_DISCOUNT , l_RETURNFLAG , l_SHIPDATE FROM lineitem , orders WHERE o_ORDERKEY = l_ORDERKEY";
+   char input_sql[] = "SELECT l_ORDERKEY , l_TAX , l_DISCOUNT , l_RETURNFLAG , l_SHIPDATE FROM lineitem , orders WHERE o_ORDERKEY = l_ORDERKEY AND l_RETURNFLAG = C";
    // char input_sql[] = "SELECT a_QUANTITY , a_TAX , a_DISCOUNT , a_RETURNFLAG FROM a_t1 , b_t2 WHERE a_DISCOUNT = b_DISCOUNT";
+   
    origin_query = parse_sql(input_sql);
 
    printf("\nOrigin Query object\n");

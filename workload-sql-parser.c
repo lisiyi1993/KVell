@@ -1653,7 +1653,11 @@ query_t* parse_sql(char *input_sql) {
                      }
                   }
                }
-            }  
+               else
+               {
+                  step = stepWhereContinue;
+               }
+            } 
             break;
          }
          case stepWhereContinue: 
