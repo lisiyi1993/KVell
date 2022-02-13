@@ -898,171 +898,77 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
    {
       if (condition->is_join_condition)
       {
-         switch (condition->operator)
+         field_operand_t *field_operand = condition->operand1;
+         comparison_condition_t *comparison_condition = (comparison_condition_t *) condition->operand2;
+
+         char *table1_name = ht_get(table_identifier_to_table_name, field_operand->table_identifier);
+         char *field1_name = field_operand->name;
+         
+         char *table2_name = ht_get(table_identifier_to_table_name, comparison_condition->table);
+         char *field2_name = (char *) comparison_condition->value;
+
+         sql_result_node *cur1_result_node;
+         table_t *table1;
+         if (strcmp(table1_name, "lineitem") == 0)
          {
-            case EQ:
-            case NE:
-            case GT:
-            case LT:
-            case GTE:
-            case LTE:
+            cur1_result_node = lineitem_result_list;
+            table1 = lineitem_table;
+         }
+         else if (strcmp(table1_name, "orders") == 0)
+         {
+            cur1_result_node = orders_result_list;
+            table1 = orders_table;
+         }
+
+         while (cur1_result_node != NULL)
+         {
+            sql_result_node *cur2_result_node;
+            table_t *table2;
+            if (strcmp(table2_name, "lineitem") == 0)
             {
-               field_operand_t *field_operand = condition->operand1;
-               comparison_condition_t *comparison_condition = (comparison_condition_t *) condition->operand2;
-
-               char *table1_name = ht_get(table_identifier_to_table_name, field_operand->table_identifier);
-               char *table2_name = ht_get(table_identifier_to_table_name, comparison_condition->table);
-
-               char *field1_name = field_operand->name;
-               char *field2_name = (char *) comparison_condition->value;
-
-               sql_result_node *cur1_result_node;
-               table_t *table1;
-               if (strcmp(table1_name, "lineitem") == 0)
-               {
-                  cur1_result_node = lineitem_result_list;
-                  table1 = lineitem_table;
-               }
-               else if (strcmp(table1_name, "orders") == 0)
-               {
-                  cur1_result_node = orders_result_list;
-                  table1 = orders_table;
-               }
-               while (cur1_result_node != NULL)
-               {
-                  char *value1 = get_column_string_value(cur1_result_node->item, field1_name, table1);
-                  // printf("-----------------------------------\n");
-                  // printf("Finding value1 being: %s\n", value1);
-
-                  sql_result_node *cur2_result_node;
-                  table_t *table2;
-                  if (strcmp(table2_name, "lineitem") == 0)
-                  {
-                     cur2_result_node = lineitem_result_list;
-                     table2 = lineitem_table;
-                  }
-                  else if (strcmp(table2_name, "orders") == 0)
-                  {
-                     cur2_result_node = orders_result_list;
-                     table2 = orders_table;
-                  }
-                  
-                  while (cur2_result_node != NULL)
-                  {
-                     char *value2 = get_column_string_value(cur2_result_node->item, field2_name, table2);
-                     bool valid = false;
-                     switch (condition->operator)
-                     {
-                     case EQ:
-                        if (strcmp(value1, value2) == 0) 
-                        {
-                           valid = true;
-                        }
-                        break;
-                     case NE:
-                        if (strcmp(value1, value2) != 0) 
-                        {
-                           valid = true;
-                        }
-                        break;
-                     case GT:
-                        if (strcmp(value1, value2) > 0) 
-                        {
-                           valid = true;
-                        }
-                        break;
-                     case LT:
-                        if (strcmp(value1, value2) < 0) 
-                        {
-                           valid = true;
-                        }
-                        break;
-                     case GTE:
-                        if (strcmp(value1, value2) >= 0) 
-                        {
-                           valid = true;
-                        }
-                        break;
-                     case LTE:
-                        if (strcmp(value1, value2) < 0) 
-                        {
-                           valid = true;
-                        }
-                        break;
-                     default:
-                        break;
-                     }
-
-                     if (valid)
-                     {
-                        // printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-                        // printf("item 1 match with item 2\n");
-                        // dump_shash(cur2_result_node->item);
-                        list_node_t *cur_field_ptr = origin_query->field_ptr;
-                        while (cur_field_ptr != NULL)
-                        {
-                           if (strcmp(cur_field_ptr->key, field_operand->table_identifier) == 0)
-                           {
-                              char *value1 = get_column_string_value(cur1_result_node->item, cur_field_ptr->val, table1);
-                              printf("%s: %s, ", cur_field_ptr->val, value1);
-                           }
-                           else if (strcmp(cur_field_ptr->key, comparison_condition->table) == 0)
-                           {
-                              char *value2 = get_column_string_value(cur2_result_node->item, cur_field_ptr->val, table2);
-                              printf("%s: %s, ", cur_field_ptr->val, value2);
-                           }
-                           cur_field_ptr = cur_field_ptr->next;
-                        }
-                        printf("\n");
-                     }
-                     cur2_result_node = cur2_result_node->next;
-                  }
-
-                  cur1_result_node = cur1_result_node->next;
-               }
-            
-               break;
+               cur2_result_node = lineitem_result_list;
+               table2 = lineitem_table;
             }
-            default:
+            else if (strcmp(table2_name, "orders") == 0)
             {
-               break;
-            }  
+               cur2_result_node = orders_result_list;
+               table2 = orders_table;
+            }
+            
+            while (cur2_result_node != NULL) 
+            {
+               char *value2 = get_column_string_value(cur2_result_node->item, field2_name, table2);
+               bool valid = compare_column_value(cur1_result_node->item, field1_name, condition->operator, value2, false, table1);
+               
+               if (valid)
+               {
+                  list_node_t *cur_field_ptr = origin_query->field_ptr;
+                  while (cur_field_ptr != NULL)
+                  {
+                     if (strcmp(cur_field_ptr->key, field_operand->table_identifier) == 0)
+                     {
+                        char *value1 = get_column_string_value(cur1_result_node->item, cur_field_ptr->val, table1);
+                        printf("%s: %s, ", cur_field_ptr->val, value1);
+                     }
+                     else if (strcmp(cur_field_ptr->key, comparison_condition->table) == 0)
+                     {
+                        char *value2 = get_column_string_value(cur2_result_node->item, cur_field_ptr->val, table2);
+                        printf("%s: %s, ", cur_field_ptr->val, value2);
+                     }
+                     cur_field_ptr = cur_field_ptr->next;
+                  }
+                  printf("\n");
+               }
+
+               cur2_result_node = cur2_result_node->next;
+            }
+
+            cur1_result_node = cur1_result_node->next;
          }
       }
 
       condition = condition->next_condition;
    }
-
-   // cur_orders_result_item = orders_result_list;
-   // while (cur_orders_result_item != NULL)
-   // {
-   //    char *order_order_key = get_column_string_value(cur_orders_result_item->item, "ORDERKEY", orders_table);
-   //    printf("-----------------------------------\n");
-   //    printf("Finding lineitems with orderkey: %s\n", order_order_key);
-
-   //    cur_lineitem_result_item = lineitem_result_list;
-   //    while (cur_lineitem_result_item != NULL)
-   //    {
-   //       char *lineitem_order_key = get_column_string_value(cur_lineitem_result_item->item, "ORDERKEY", lineitem_table);
-   //       if (strcmp(order_order_key, lineitem_order_key) == 0)
-   //       {
-   //          printf("LINENUMBER: %s ", get_column_string_value(cur_lineitem_result_item->item, "LINENUMBER", lineitem_table));
-   //          printf("ORDERKEY: %s", get_column_string_value(cur_lineitem_result_item->item, "ORDERKEY", lineitem_table));
-   //          printf("\n");
-   //       }
-   //       cur_lineitem_result_item = cur_lineitem_result_item->next;
-   //    }
-   //    cur_orders_result_item = cur_orders_result_item->next;
-   // }
-   
-   // while (cur_lineitem_result_item != NULL) {
-   //    char *value = get_column_string_value(cur_lineitem_result_item->item, "ORDERKEY", lineitem_table);
-
-   //    cur_orders_result_item = orders_result_list;
-   //    printf("-------------------------\n");
-   //    printf("LINENUMBER: %s\n", value);
-   //    cur_lineitem_result_item = cur_lineitem_result_item->next;
-   // }
 }
 
 /* Generic interface */
@@ -1207,7 +1113,7 @@ void add_str_to_set(hashset_t set, char *str)
    }
 }
 
-query_t* parse_sql(char *input_sql) {
+void parse_sql(char *input_sql) {
    char delim[] = " ";
    char* ptr = strtok(input_sql, delim);
 
@@ -1718,7 +1624,108 @@ query_t* parse_sql(char *input_sql) {
       }
    }
 
-   return query;
+   origin_query = query;
+   printf("\nOrigin Query object\n");
+   print_query_object(origin_query);
+   printf("\n");
+
+   sub_queries_map = ht_create();
+   query_t *current_sub_query;
+
+   hti sql_tables_columns_iterator = ht_iterator(sql_tables_columns);
+   while (ht_next(&sql_tables_columns_iterator)) {
+      char *selected_table_identifier = (char *) sql_tables_columns_iterator.key;
+      hashset_t table_columns = (hashset_t) sql_tables_columns_iterator.value;
+      hashset_itr_t table_columns_iter = hashset_iterator(table_columns);
+
+      current_sub_query = (query_t *) calloc(1, sizeof(query_t));
+      current_sub_query->type = SELECT;
+      current_sub_query->table_name_ptr = (table_name_t *) calloc(1, sizeof(table_name_t));
+      current_sub_query->table_name_ptr->name = ht_get(table_identifier_to_table_name, selected_table_identifier);
+      strcpy(current_sub_query->table_name_ptr->identifier, selected_table_identifier);
+      
+      current_sub_query->field_ptr = calloc(1, sizeof(list_node_t));
+      list_node_t *current_field_ptr = current_sub_query->field_ptr;
+
+      while(hashset_iterator_has_next(table_columns_iter))
+      {
+         current_field_ptr->val = (char *) hashset_iterator_value(table_columns_iter);
+         current_field_ptr->key = (char *) sql_tables_columns_iterator.key;
+
+         // printf("%s ", current_field_ptr->val);
+         hashset_iterator_next(table_columns_iter);
+         if (hashset_iterator_has_next(table_columns_iter))
+         {
+            current_field_ptr->next = calloc(1, sizeof(list_node_t));
+            current_field_ptr = current_field_ptr->next;
+         }
+      }
+
+      // add conditions too
+      condition_t *origin_condition_ptr = origin_query->condition_ptr;
+      if (strcmp(origin_condition_ptr->operand1->table_identifier, selected_table_identifier) == 0 && !origin_condition_ptr->is_join_condition)
+      {
+         condition_t *new_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+         new_condition_ptr->operand1 = origin_condition_ptr->operand1;
+         new_condition_ptr->operator = origin_condition_ptr->operator;
+         new_condition_ptr->operand2 = origin_condition_ptr->operand2;
+         new_condition_ptr->not = origin_condition_ptr->not;
+
+         current_sub_query->condition_ptr = new_condition_ptr;
+      }
+
+      condition_t *origin_and_condition_ptr = origin_query->and_condition_ptr;
+      condition_t *current_sub_query_and_condition_ptr;
+      while (origin_and_condition_ptr != NULL)
+      {
+         if (strcmp(origin_and_condition_ptr->operand1->table_identifier, selected_table_identifier) == 0 && !origin_and_condition_ptr->is_join_condition)
+         {
+            if (current_sub_query->and_condition_ptr == NULL)
+            {
+               current_sub_query->and_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+               current_sub_query_and_condition_ptr = current_sub_query->and_condition_ptr;
+            }
+            else {
+                current_sub_query_and_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
+                current_sub_query_and_condition_ptr = current_sub_query_and_condition_ptr->next_condition;
+            }
+
+            current_sub_query_and_condition_ptr->operand1 = origin_and_condition_ptr->operand1;
+            current_sub_query_and_condition_ptr->operator = origin_and_condition_ptr->operator;
+            current_sub_query_and_condition_ptr->operand2 = origin_and_condition_ptr->operand2;
+            current_sub_query_and_condition_ptr->not = origin_and_condition_ptr->not;
+         }
+         origin_and_condition_ptr = origin_and_condition_ptr->next_condition;
+      }
+
+      condition_t *origin_or_condition_ptr = origin_query->or_condition_ptr;
+      condition_t *current_sub_query_or_condition_ptr;
+      while (origin_or_condition_ptr != NULL)
+      {
+         if (strcmp(origin_or_condition_ptr->operand1->table_identifier, selected_table_identifier) == 0 && !origin_or_condition_ptr->is_join_condition)
+         {
+            if (current_sub_query->or_condition_ptr == NULL)
+            {
+               current_sub_query->or_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+               current_sub_query_or_condition_ptr = current_sub_query->or_condition_ptr;
+            }
+            else {
+               current_sub_query_or_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
+               current_sub_query_or_condition_ptr = current_sub_query_or_condition_ptr->next_condition;
+            }
+
+            current_sub_query_or_condition_ptr->operand1 = origin_or_condition_ptr->operand1;
+            current_sub_query_or_condition_ptr->operator = origin_or_condition_ptr->operator;
+            current_sub_query_or_condition_ptr->operand2 = origin_or_condition_ptr->operand2;
+            current_sub_query_or_condition_ptr->not = origin_or_condition_ptr->not;
+         }
+         origin_or_condition_ptr = origin_or_condition_ptr->next_condition;
+      }
+
+      ht_set(sub_queries_map, selected_table_identifier, current_sub_query);
+   }
+
+   return;
 }
 
 char* check_operator(operator_t op) 

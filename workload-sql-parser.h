@@ -137,9 +137,6 @@ struct column_info
    data_type type;
 };
 
-
-query_t* parse_sql(char *ptr);
-
 query_t* origin_query;
 query_t* query;
 
@@ -155,6 +152,8 @@ sql_result_node *cur_lineitem_result_item;
 
 sql_result_node *orders_result_list;
 sql_result_node *cur_orders_result_item;
+
+void parse_sql(char *ptr);
 
 void print_query_object(query_t *query);
 
