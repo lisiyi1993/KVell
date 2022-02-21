@@ -147,7 +147,7 @@ long rand_between(long a, long b) {
    if(a == b)
       return a;
    //return a + lrand(b-a);
-   return a + rand_r(&seed) % (b - a);
+   return a + rand() % (b + 1 - a);
    // return a + lehmer64() % (b - a);
 }
 

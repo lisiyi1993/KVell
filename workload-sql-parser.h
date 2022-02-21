@@ -7,8 +7,9 @@
 #define WORKLOAD_TPCH
 
 
-#define NB_LINEITEMS 15
-#define NB_ORDERS 3
+#define NB_LINEITEMS 50
+#define NB_ORDERS 10
+#define NB_CUSTOMER 4
 
 size_t get_db_size_sql_parser(void);
 
@@ -19,7 +20,7 @@ typedef struct result_node
 {
    char *item;
    struct result_node *next;
-} sql_result_node;
+} sql_result_node_t;
 
 typedef struct node 
 {
@@ -147,11 +148,16 @@ table_t *lineitem_table;
 
 table_t *orders_table;
 
-sql_result_node *lineitem_result_list;
-sql_result_node *cur_lineitem_result_item;
+table_t *customer_table;
 
-sql_result_node *orders_result_list;
-sql_result_node *cur_orders_result_item;
+sql_result_node_t *lineitem_result_list;
+sql_result_node_t *cur_lineitem_result_item;
+
+sql_result_node_t *orders_result_list;
+sql_result_node_t *cur_orders_result_item;
+
+sql_result_node_t *customer_result_list;
+sql_result_node_t *cur_customer_result_item;
 
 void parse_sql(char *ptr);
 

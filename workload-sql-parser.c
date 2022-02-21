@@ -21,7 +21,7 @@
 /*
  * SQL PARSER has a few tables and columns:
  */
-enum table { LINEITEM, PART, PARTSUPP, ORDERS, SUPPLIERS, CUSTOMER, NATION, REGION };
+enum table { LINEITEM, PART, PARTSUPP, ORDERS, SUPPLIERS, CUSTOMER, NATION, REGION, TMP };
 
 enum column {
    ORDERKEY, PARTKEY, SUPPKEY, LINENUMBER, QUANTITY, EXTENDEDPRICE, DISCOUNT, TAX, RETURNFLAG, LINESTATUS, SHIPDATE, COMMITDATE, RECEIPTDATE, SHIPINSTRUCT, SHIPMODE, COMMENT,
@@ -99,6 +99,32 @@ void create_orders_table(long num_columns, char input_columns[][100], char input
    }
 }
 
+void create_cutomer_table(long num_columns, char input_columns[][100], char input_columns_type[][100]) 
+{
+   customer_table = (table_t *) calloc(1, sizeof(table_t));
+   customer_table->name = "customer";
+   customer_table->start_index = NB_LINEITEMS + NB_ORDERS - 1;
+   customer_table->end_index = NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER;
+
+   customer_table->column_map = ht_create();
+   for (size_t i = 0; i < num_columns; i++)
+   {
+      struct column_info *ci = calloc(1, sizeof(ci));
+      ci->index = i;
+
+      if (strcmp(input_columns_type[i], "INT") == 0) 
+      {
+         ci->type = INT;
+      }
+      else if (strcmp(input_columns_type[i], "STRING") == 0)
+      {
+         ci->type = STRING;
+      }
+
+      ht_set(customer_table->column_map, input_columns[i], ci);
+   }
+}
+
 char *add_column_value(char *item, char *column_name, void *value, table_t *table) {
    struct column_info *ci = ht_get(table->column_map, column_name);
    switch (ci->type)
@@ -117,7 +143,7 @@ char *add_column_value(char *item, char *column_name, void *value, table_t *tabl
 static char* get_column_string_value(char* item, char* column_name, table_t *table) { 
    struct column_info *ci = ht_get(table->column_map, column_name);
    
-   char *tmp = malloc(256);
+   char *tmp = (char *) calloc(1, sizeof(char));
    switch (ci->type)
    {
    case INT:
@@ -134,7 +160,7 @@ static char* get_column_string_value(char* item, char* column_name, table_t *tab
 }
 
 bool compare_column_value(char *item, char *column_name, operator_t operator, void *expected_value, bool not, table_t *table) {
-   struct column_info *ci = ht_get(lineitem_table->column_map, column_name);
+   struct column_info *ci = ht_get(table->column_map, column_name);
    void *item_value = get_column_string_value(item, column_name, table);
 
    bool res;
@@ -433,6 +459,22 @@ long sql_parser_get_key_order(long order) {
    return k.key;
 }
 
+long sql_parser_get_key_customer(long customer) {
+   struct sql_parser_key k = {
+      .table = CUSTOMER,
+      .prim_key = customer
+   };
+   return k.key;
+}
+
+long sql_parser_get_key_tmp(long tmp) {
+   struct sql_parser_key k = {
+      .table = TMP,
+      .prim_key = tmp
+   };
+   return k.key;
+}
+
 static char *sql_parser_lineitem(uint64_t uid) {
    uint64_t key = sql_parser_get_key_lineitem(uid);
    char *item = create_shash(key);
@@ -441,6 +483,18 @@ static char *sql_parser_lineitem(uint64_t uid) {
 
 static char *sql_parser_order(uint64_t uid) {
    uint64_t key = sql_parser_get_key_order(uid);
+   char *item = create_shash(key);
+   return item;
+}
+
+static char *sql_parser_customer(uint64_t uid) {
+   uint64_t key = sql_parser_get_key_customer(uid);
+   char *item = create_shash(key);
+   return item;
+}
+
+static char *sql_parser_tmp(uint64_t uid) {
+   uint64_t key = sql_parser_get_key_tmp(uid);
    char *item = create_shash(key);
    return item;
 }
@@ -459,7 +513,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       char *item = sql_parser_lineitem(uid);
 
       item = add_column_value(item, "TABLE", "lineitem", lineitem_table);
-      item = add_column_value(item, "ORDERKEY", uid % (NB_ORDERS + 2), lineitem_table);
+      item = add_column_value(item, "ORDERKEY", rand_between(0, NB_ORDERS + 2), lineitem_table);
       item = add_column_value(item, "LINENUMBER", uid, lineitem_table);
       item = add_column_value(item, "QUANTITY", uid * 10, lineitem_table);
       item = add_column_value(item, "DISCOUNT", rand_between(100, 999), lineitem_table);
@@ -481,6 +535,14 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "LINESTATUS", "3", lineitem_table);
       }
       
+      item = add_column_value(item, "PARTKEY", -1, lineitem_table);
+      item = add_column_value(item, "SUPPKEY", -1, lineitem_table);
+      item = add_column_value(item, "EXTENDEDPRICE", -1, lineitem_table);
+      item = add_column_value(item, "COMMITDATE", "NULL", lineitem_table);
+      item = add_column_value(item, "RECEIPTDATE", "NULL", lineitem_table);
+      item = add_column_value(item, "SHIPINSTRUCT", "NULL", lineitem_table);
+      item = add_column_value(item, "SHIPMODE", "NULL", lineitem_table);
+      item = add_column_value(item, "COMMENT", "NULL", lineitem_table);
       // dump_shash(item);
       return item;
       // return sql_parser_lineitem(uid);
@@ -492,6 +554,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       item = add_column_value(item, "TABLE", "orders", orders_table);
       item = add_column_value(item, "ORDERKEY", uid % NB_ORDERS, orders_table);
       item = add_column_value(item, "ORDERDATE", "1998-08-01", orders_table);
+      item = add_column_value(item, "CUSTKEY", rand_between(0, NB_CUSTOMER + 4), orders_table);
 
       if (uid % 2 == 0)
       {
@@ -505,6 +568,31 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       // dump_shash(item);
       return item;
    }
+   else if (NB_LINEITEMS + NB_ORDERS <= uid && uid < NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER)
+   {
+      char *item = sql_parser_customer(uid);
+      item = add_column_value(item, "TABLE", "customer", customer_table);
+      item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
+      
+      if (uid % NB_CUSTOMER == 0)
+      {
+         item = add_column_value(item, "NAME", "Alex", customer_table);
+      }
+      else if (uid % NB_CUSTOMER == 1)
+      {
+         item = add_column_value(item, "NAME", "John", customer_table);
+      }
+      else if (uid % NB_CUSTOMER == 2)
+      {
+         item = add_column_value(item, "NAME", "Martin", customer_table);
+      }
+      else if (uid % NB_CUSTOMER == 3)
+      {
+         item = add_column_value(item, "NAME", "Cristian", customer_table);
+      }
+
+      return item;
+   }
    // uid -= NB_LINEITEMS;
 
    printf("return null\n");
@@ -513,7 +601,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
 
 
 size_t get_db_size_sql_parser(void) {
-   return NB_LINEITEMS + NB_ORDERS;
+   return NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER;
 }
 
 
@@ -673,6 +761,10 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       {
          table_info = orders_table;
       }
+      else if (strcmp(query->table_name_ptr->name, "customer") == 0)
+      {
+         table_info = customer_table;
+      }
 
       bool valid_conds = true;
       // check if item respect the where condition
@@ -718,7 +810,7 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       char *item_table = get_shash_string(item, 0);
       if (strcmp(item_table, "lineitem") == 0) 
       {
-         char *key_string = get_column_string_value(item, "LINENUMBER", lineitem_table);
+         char *key_string = get_column_string_value(item, "LINENUMBER", table_info);
 
          list_node_t* current_field = query->field_ptr;
          char *value = malloc(1024);
@@ -726,7 +818,7 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
          {
             strcat(value, current_field->val);
             strcat(value, ": ");
-            strcat(value, get_column_string_value(item, current_field->val, lineitem_table));
+            strcat(value, get_column_string_value(item, current_field->val, table_info));
             strcat(value, ", ");
             
             current_field = current_field->next;
@@ -738,12 +830,12 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
 
          if (lineitem_result_list == NULL)
          {
-            lineitem_result_list = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            lineitem_result_list = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
             cur_lineitem_result_item = lineitem_result_list;
          }
          else 
          {
-            cur_lineitem_result_item->next = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            cur_lineitem_result_item->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
             cur_lineitem_result_item = cur_lineitem_result_item->next;
          }
          cur_lineitem_result_item->item = item;
@@ -770,18 +862,50 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
          
          if (orders_result_list == NULL)
          {
-            orders_result_list = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            orders_result_list = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
             cur_orders_result_item = orders_result_list;
          }
          else
          {
-            cur_orders_result_item->next = (sql_result_node *) calloc(1, sizeof(sql_result_node));
+            cur_orders_result_item->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
             cur_orders_result_item = cur_orders_result_item->next;
          }
 
          cur_orders_result_item->item = item;
       }
-      
+      else if (strcmp(item_table, "customer") == 0) 
+      {
+         char *key_string = get_column_string_value(item, "CUSTKEY", table_info);
+
+         list_node_t* current_field = query->field_ptr;
+         char *value = malloc(1024);
+         while (current_field != NULL)
+         {
+            strcat(value, current_field->val);
+            strcat(value, ": ");
+            strcat(value, get_column_string_value(item, current_field->val, table_info));
+            strcat(value, ", ");
+            
+            current_field = current_field->next;
+         }
+         // printf("%s", value);
+         // printf("\n");
+
+         ht_set(p->map, key_string, value);
+         
+         if (customer_result_list == NULL)
+         {
+            customer_result_list = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            cur_customer_result_item = customer_result_list;
+         }
+         else
+         {
+            cur_customer_result_item->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            cur_customer_result_item = cur_customer_result_item->next;
+         }
+
+         cur_customer_result_item->item = item;
+      }
    }
 }
 
@@ -809,10 +933,10 @@ static void do_injector_bg_work(struct workload *w, struct injector_queue *q, st
       struct scan_payload *returned_payload = p->scan_cb->payload;
       printf("done scanning\n"); 
 
-      hti iterator = ht_iterator(returned_payload->map);
-      while (ht_next(&iterator)) {
-         printf("%s -> %s \n", iterator.key, iterator.value);
-      }
+      // hti iterator = ht_iterator(returned_payload->map);
+      // while (ht_next(&iterator)) {
+      //    printf("%s -> %s \n", iterator.key, iterator.value);
+      // }
 
       p->nb_scans_done++;
       size_t beginning = item_get_key(p->scan_cb->item), end;
@@ -855,7 +979,6 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
 
    // query = ht_get(sub_queries_map, "o");
    // print_query_object(query);
-   // // _p.scan_cb = start_background_scan(uid, w, q, sql_parser_get_key_lineitem(NB_LINEITEMS), sql_parser_get_key_lineitem(NB_LINEITEMS + NB_ORDERS));
    // _p.scan_cb = start_background_scan(uid, w, q, sql_parser_get_key_order(orders_table->start_index), sql_parser_get_key_order(orders_table->end_index));
 
    // do {
@@ -884,6 +1007,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          start_index = sql_parser_get_key_order(orders_table->start_index);
          end_index = sql_parser_get_key_order(orders_table->end_index);
       }
+      else if (strcmp(query->table_name_ptr->name, "customer") == 0)
+      {
+         start_index = sql_parser_get_key_customer(customer_table->start_index);
+         end_index = sql_parser_get_key_customer(customer_table->end_index);
+      }
 
       _p.scan_cb = start_background_scan(uid, w, q, start_index, end_index);
    
@@ -892,6 +1020,18 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          do_injector_bg_work(w, q, &_p);
       } while(pending_work() || injector_has_pending_work(q));
    }
+
+   sql_result_node_t *outcome_list = NULL;
+   sql_result_node_t *cur_outcome_node = NULL;
+   table_t *outcome_table;
+
+   sql_result_node_t *intermediate_node = NULL;
+   sql_result_node_t *current_intermediate_node = NULL;
+   
+   table_t *intermediate_table = (table_t *) calloc(1, sizeof(table_t));
+   intermediate_table->column_map = ht_create();
+   int tmp_column_index = 0;
+   long tmp_item_index = 0;
 
    condition_t *condition = origin_query->condition_ptr;
    while (condition != NULL)
@@ -907,7 +1047,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          char *table2_name = ht_get(table_identifier_to_table_name, comparison_condition->table);
          char *field2_name = (char *) comparison_condition->value;
 
-         sql_result_node *cur1_result_node;
+         sql_result_node_t *cur1_result_node;
          table_t *table1;
          if (strcmp(table1_name, "lineitem") == 0)
          {
@@ -919,10 +1059,29 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             cur1_result_node = orders_result_list;
             table1 = orders_table;
          }
+         else if (strcmp(table1_name, "customer") == 0)
+         {
+            cur1_result_node = customer_result_list;
+            table1 = customer_table;
+         }
+
+         hti table1_iterator = ht_iterator(table1->column_map);
+         while (ht_next(&table1_iterator)) 
+         {
+            if (ht_get(intermediate_table->column_map, table1_iterator.key) == NULL)
+            {
+               struct column_info *tmp_ci = calloc(1, sizeof(tmp_ci));
+               tmp_ci->index = tmp_column_index;
+               tmp_ci->type = ((struct column_info *) (table1_iterator.value))->type;
+               tmp_column_index++;
+               ht_set(intermediate_table->column_map, table1_iterator.key, tmp_ci);
+            }
+         }
+         bool added = false;
 
          while (cur1_result_node != NULL)
          {
-            sql_result_node *cur2_result_node;
+            sql_result_node_t *cur2_result_node;
             table_t *table2;
             if (strcmp(table2_name, "lineitem") == 0)
             {
@@ -934,6 +1093,28 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
                cur2_result_node = orders_result_list;
                table2 = orders_table;
             }
+            else if (strcmp(table1_name, "customer") == 0)
+            {
+               cur1_result_node = customer_result_list;
+               table1 = customer_table;
+            }
+
+            if (!added)
+            {
+               hti table2_iterator = ht_iterator(table2->column_map);
+               while (ht_next(&table2_iterator)) 
+               {
+                  if (ht_get(intermediate_table->column_map, table2_iterator.key) == NULL)
+                  {
+                     struct column_info *tmp_ci = calloc(1, sizeof(tmp_ci));
+                     tmp_ci->index = tmp_column_index;
+                     tmp_ci->type = ((struct column_info *) (table2_iterator.value))->type;
+                     tmp_column_index++;
+                     ht_set(intermediate_table->column_map, table2_iterator.key, tmp_ci);
+                  }
+               }
+               added = true;
+            }
             
             while (cur2_result_node != NULL) 
             {
@@ -942,22 +1123,62 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
                
                if (valid)
                {
-                  list_node_t *cur_field_ptr = origin_query->field_ptr;
-                  while (cur_field_ptr != NULL)
+                  char *tmp_item = sql_parser_tmp(tmp_item_index);
+                  tmp_item_index++;
+
+                  hti table1_iterator = ht_iterator(table1->column_map);
+                  while (ht_next(&table1_iterator)) 
                   {
-                     if (strcmp(cur_field_ptr->key, field_operand->table_identifier) == 0)
+                     if (strcmp(table1_iterator.key, "TABLE") != 0)
                      {
-                        char *value1 = get_column_string_value(cur1_result_node->item, cur_field_ptr->val, table1);
-                        printf("%s: %s, ", cur_field_ptr->val, value1);
+                        char *tmp_value = get_column_string_value(cur1_result_node->item, table1_iterator.key, table1);
+                        struct column_info *ci = ht_get(intermediate_table->column_map, table1_iterator.key);
+                        switch (ci->type)
+                        {
+                        case INT:
+                           tmp_item = add_column_value(tmp_item, table1_iterator.key, atoi(tmp_value), intermediate_table);
+                           break;
+                        case STRING:
+                           tmp_item = add_column_value(tmp_item, table1_iterator.key, tmp_value, intermediate_table);
+                           break;
+                        default:
+                           break;
+                        }
                      }
-                     else if (strcmp(cur_field_ptr->key, comparison_condition->table) == 0)
-                     {
-                        char *value2 = get_column_string_value(cur2_result_node->item, cur_field_ptr->val, table2);
-                        printf("%s: %s, ", cur_field_ptr->val, value2);
-                     }
-                     cur_field_ptr = cur_field_ptr->next;
                   }
-                  printf("\n");
+
+                  hti table2_iterator = ht_iterator(table2->column_map);
+                  while (ht_next(&table2_iterator)) 
+                  {
+                     if (strcmp(table2_iterator.key, field2_name) != 0 && strcmp(table2_iterator.key, "TABLE") != 0)
+                     {
+                        char *tmp_value = get_column_string_value(cur2_result_node->item, table2_iterator.key, table2);
+                        struct column_info *ci = ht_get(intermediate_table->column_map, table2_iterator.key);
+                        switch (ci->type)
+                        {
+                        case INT:
+                           tmp_item = add_column_value(tmp_item, table2_iterator.key, atoi(tmp_value), intermediate_table);
+                           break;
+                        case STRING:
+                           tmp_item = add_column_value(tmp_item, table2_iterator.key, tmp_value, intermediate_table);
+                           break;
+                        default:
+                           break;
+                        }
+                     }
+                  }
+
+                  if (intermediate_node == NULL)
+                  {
+                     intermediate_node = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+                     current_intermediate_node = intermediate_node;
+                  }
+                  else 
+                  {
+                     current_intermediate_node->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+                     current_intermediate_node = current_intermediate_node->next;
+                  }
+                  current_intermediate_node->item = tmp_item;
                }
 
                cur2_result_node = cur2_result_node->next;
@@ -968,6 +1189,230 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
       }
 
       condition = condition->next_condition;
+   }
+   printf("\n");
+   
+   tmp_column_index = 0;
+   if (intermediate_node != NULL)
+   {
+      outcome_list = intermediate_node;
+      outcome_table = intermediate_table;
+
+      intermediate_node = NULL;
+      current_intermediate_node = NULL;
+      intermediate_table = (table_t *) calloc(1, sizeof(table_t));
+      intermediate_table->column_map = ht_create();
+   }
+
+   condition = origin_query->and_condition_ptr;
+   while (condition != NULL)
+   {
+      if (condition->is_join_condition)
+      {
+         field_operand_t *field_operand = condition->operand1;
+         comparison_condition_t *comparison_condition = (comparison_condition_t *) condition->operand2;
+
+         char *table1_name = ht_get(table_identifier_to_table_name, field_operand->table_identifier);
+         char *field1_name = field_operand->name;
+         
+         char *table2_name = ht_get(table_identifier_to_table_name, comparison_condition->table);
+         char *field2_name = (char *) comparison_condition->value;
+
+         sql_result_node_t *cur1_result_node;
+         table_t *table1;
+         if (outcome_list != NULL && ht_get(outcome_table->column_map, field1_name) != NULL) 
+         {
+            cur1_result_node = outcome_list;
+            table1 = outcome_table;
+         }
+         else if (strcmp(table1_name, "lineitem") == 0)
+         {
+            cur1_result_node = lineitem_result_list;
+            table1 = lineitem_table;
+         }
+         else if (strcmp(table1_name, "orders") == 0)
+         {
+            cur1_result_node = orders_result_list;
+            table1 = orders_table;
+         }
+         else if (strcmp(table1_name, "customer") == 0)
+         {
+            cur1_result_node = customer_result_list;
+            table1 = customer_table;
+         }
+
+         hti table1_iterator = ht_iterator(table1->column_map);
+         while (ht_next(&table1_iterator)) 
+         {
+            if (ht_get(intermediate_table->column_map, table1_iterator.key) == NULL)
+            {
+               struct column_info *tmp_ci = calloc(1, sizeof(tmp_ci));
+               tmp_ci->index = tmp_column_index;
+               tmp_ci->type = ((struct column_info *) (table1_iterator.value))->type;
+               tmp_column_index++;
+               ht_set(intermediate_table->column_map, table1_iterator.key, tmp_ci);
+            }
+         }
+         bool added = false;
+
+         while (cur1_result_node != NULL)
+         {
+            sql_result_node_t *cur2_result_node;
+            table_t *table2;
+            if (strcmp(table2_name, "lineitem") == 0)
+            {
+               cur2_result_node = lineitem_result_list;
+               table2 = lineitem_table;
+            }
+            else if (strcmp(table2_name, "orders") == 0)
+            {
+               cur2_result_node = orders_result_list;
+               table2 = orders_table;
+            }
+            else if (strcmp(table2_name, "customer") == 0)
+            {
+               cur2_result_node = customer_result_list;
+               table2 = customer_table;
+            }
+            else if (outcome_list != NULL && ht_get(outcome_table->column_map, field2_name) != NULL)
+            {
+               cur2_result_node = outcome_list;
+               table2 = outcome_table;
+            }
+            
+            if (!added)
+            {
+               hti table2_iterator = ht_iterator(table2->column_map);
+               while (ht_next(&table2_iterator)) 
+               {
+                  if (ht_get(intermediate_table->column_map, table2_iterator.key) == NULL)
+                  {
+                     struct column_info *tmp_ci = calloc(1, sizeof(tmp_ci));
+                     tmp_ci->index = tmp_column_index;
+                     tmp_ci->type = ((struct column_info *) (table2_iterator.value))->type;
+                     tmp_column_index++;
+                     ht_set(intermediate_table->column_map, table2_iterator.key, tmp_ci);
+                  }
+               }
+               added = true;
+            }
+            
+            while (cur2_result_node != NULL) 
+            {
+               char *value2 = get_column_string_value(cur2_result_node->item, field2_name, table2);
+               bool valid = compare_column_value(cur1_result_node->item, field1_name, condition->operator, value2, false, table1);
+
+               if (valid)
+               {
+                  char *tmp_item = sql_parser_tmp(tmp_item_index);
+                  tmp_item_index++;
+
+                  hti table1_iterator = ht_iterator(table1->column_map);
+                  while (ht_next(&table1_iterator)) 
+                  {
+                     if (strcmp(table1_iterator.key, "TABLE") != 0)
+                     {
+                        char *tmp_value = get_column_string_value(cur1_result_node->item, table1_iterator.key, table1);
+                        struct column_info *ci = ht_get(intermediate_table->column_map, table1_iterator.key);
+                        switch (ci->type)
+                        {
+                        case INT:
+                           tmp_item = add_column_value(tmp_item, table1_iterator.key, atoi(tmp_value), intermediate_table);
+                           break;
+                        case STRING:
+                           tmp_item = add_column_value(tmp_item, table1_iterator.key, tmp_value, intermediate_table);
+                           break;
+                        default:
+                           break;
+                        }
+                     }
+                  }
+
+                  hti table2_iterator = ht_iterator(table2->column_map);
+                  while (ht_next(&table2_iterator)) 
+                  {
+                     if (strcmp(table2_iterator.key, field2_name) != 0 && strcmp(table2_iterator.key, "TABLE") != 0)
+                     {
+                        char *tmp_value = get_column_string_value(cur2_result_node->item, table2_iterator.key, table2);
+                        struct column_info *ci = ht_get(intermediate_table->column_map, table2_iterator.key);
+                        switch (ci->type)
+                        {
+                        case INT:
+                           tmp_item = add_column_value(tmp_item, table2_iterator.key, atoi(tmp_value), intermediate_table);
+                           break;
+                        case STRING:
+                           tmp_item = add_column_value(tmp_item, table2_iterator.key, tmp_value, intermediate_table);
+                           break;
+                        default:
+                           break;
+                        }
+                     }
+                  }
+
+                  if (intermediate_node == NULL)
+                  {
+                     intermediate_node = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+                     current_intermediate_node = intermediate_node;
+                  }
+                  else 
+                  {
+                     current_intermediate_node->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+                     current_intermediate_node = current_intermediate_node->next;
+                  }
+                  current_intermediate_node->item = tmp_item;
+               }
+
+               cur2_result_node = cur2_result_node->next;
+            }
+
+            cur1_result_node = cur1_result_node->next;
+         }
+      }
+      condition = condition->next_condition;
+
+      tmp_column_index = 0;
+      if (intermediate_node != NULL)
+      {
+         outcome_list = intermediate_node;
+         outcome_table = intermediate_table;
+
+         intermediate_node = NULL;
+         current_intermediate_node = NULL;
+         intermediate_table = (table_t *) calloc(1, sizeof(table_t));
+         intermediate_table->column_map = ht_create();
+      }
+   }
+
+   if (outcome_list == NULL)
+   {
+      if (strcmp(origin_query->table_name_ptr->name, "lineitem") == 0) 
+      {
+         outcome_list = lineitem_result_list;
+      }
+      else if (strcmp(origin_query->table_name_ptr->name, "orders") == 0)
+      {
+         outcome_list = orders_result_list;
+      }
+      else if (strcmp(origin_query->table_name_ptr->name, "customer") == 0)
+      {
+         outcome_list = customer_result_list;
+      }
+   }
+
+   printf("final outcome\n");
+   cur_outcome_node = outcome_list;
+   while (cur_outcome_node != NULL)
+   {
+      list_node_t *cur_field_ptr = origin_query->field_ptr;
+      while (cur_field_ptr != NULL)
+      {
+         char *outcome_value = get_column_string_value(cur_outcome_node->item, cur_field_ptr->val, outcome_table);
+         printf("%s: %s, ", cur_field_ptr->val, outcome_value);
+         cur_field_ptr = cur_field_ptr->next;
+      }
+      printf("\n");
+
+      cur_outcome_node = cur_outcome_node->next;
    }
 }
 
@@ -1660,18 +2105,21 @@ void parse_sql(char *input_sql) {
             current_field_ptr = current_field_ptr->next;
          }
       }
-
+      
       // add conditions too
-      condition_t *origin_condition_ptr = origin_query->condition_ptr;
-      if (strcmp(origin_condition_ptr->operand1->table_identifier, selected_table_identifier) == 0 && !origin_condition_ptr->is_join_condition)
+      if (origin_query->condition_ptr != NULL)
       {
-         condition_t *new_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
-         new_condition_ptr->operand1 = origin_condition_ptr->operand1;
-         new_condition_ptr->operator = origin_condition_ptr->operator;
-         new_condition_ptr->operand2 = origin_condition_ptr->operand2;
-         new_condition_ptr->not = origin_condition_ptr->not;
+         condition_t *origin_condition_ptr = origin_query->condition_ptr;
+         if (strcmp(origin_condition_ptr->operand1->table_identifier, selected_table_identifier) == 0 && !origin_condition_ptr->is_join_condition)
+         {
+            condition_t *new_condition_ptr = (condition_t *) calloc(1, sizeof(condition_t));
+            new_condition_ptr->operand1 = origin_condition_ptr->operand1;
+            new_condition_ptr->operator = origin_condition_ptr->operator;
+            new_condition_ptr->operand2 = origin_condition_ptr->operand2;
+            new_condition_ptr->not = origin_condition_ptr->not;
 
-         current_sub_query->condition_ptr = new_condition_ptr;
+            current_sub_query->condition_ptr = new_condition_ptr;
+         }
       }
 
       condition_t *origin_and_condition_ptr = origin_query->and_condition_ptr;
@@ -1686,8 +2134,8 @@ void parse_sql(char *input_sql) {
                current_sub_query_and_condition_ptr = current_sub_query->and_condition_ptr;
             }
             else {
-                current_sub_query_and_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
-                current_sub_query_and_condition_ptr = current_sub_query_and_condition_ptr->next_condition;
+               current_sub_query_and_condition_ptr->next_condition = (condition_t *) calloc(1, sizeof(condition_t));
+               current_sub_query_and_condition_ptr = current_sub_query_and_condition_ptr->next_condition;
             }
 
             current_sub_query_and_condition_ptr->operand1 = origin_and_condition_ptr->operand1;
@@ -1722,6 +2170,8 @@ void parse_sql(char *input_sql) {
          origin_or_condition_ptr = origin_or_condition_ptr->next_condition;
       }
 
+      // printf("------------------------------------\n");
+      // print_query_object(current_sub_query);
       ht_set(sub_queries_map, selected_table_identifier, current_sub_query);
    }
 
