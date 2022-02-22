@@ -1400,6 +1400,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
    }
 
    printf("final outcome\n");
+   long total_num_item = 0;
    cur_outcome_node = outcome_list;
    while (cur_outcome_node != NULL)
    {
@@ -1412,7 +1413,47 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
       }
       printf("\n");
 
+      total_num_item++;
       cur_outcome_node = cur_outcome_node->next;
+   }
+
+   ht *group_by_result_map = ht_create();
+   if (origin_query->group_by_ptr != NULL) 
+   {
+      cur_outcome_node = outcome_list;
+      while (cur_outcome_node != NULL)
+      {
+         char *group_by_key = "";
+         list_node_t *cur_group_by_column = origin_query->group_by_ptr;
+         while (cur_group_by_column != NULL)
+         {
+            asprintf(&group_by_key, "%s_%s", group_by_key, get_column_string_value(cur_outcome_node->item, cur_group_by_column->val, outcome_table));
+            cur_group_by_column = cur_group_by_column->next;
+         }
+
+         group_by_t *group_by_result = (group_by_t *) ht_get(group_by_result_map, group_by_key);
+         if (group_by_result == NULL)
+         {
+            group_by_result = (group_by_t *) calloc(1, sizeof(group_by_t));
+            group_by_result->item_array = (char *) calloc(1, sizeof(char) * total_num_item);
+            group_by_result->last_index = 0;
+         }
+
+         group_by_result->item_array[group_by_result->last_index] = cur_outcome_node->item;
+         group_by_result->last_index += 1;
+
+         ht_set(group_by_result_map, group_by_key, group_by_result);
+         cur_outcome_node = cur_outcome_node->next;
+      }
+   }
+
+   hti group_by_result_map_iterator = ht_iterator(group_by_result_map);
+   while (ht_next(&group_by_result_map_iterator))
+   {
+      char *group_by_key = (char *) group_by_result_map_iterator.key;
+      group_by_t *group_by_result = (group_by_t *) group_by_result_map_iterator.value;
+
+      printf("%s: %d items \n", group_by_key, group_by_result->last_index);
    }
 }
 
@@ -1478,6 +1519,8 @@ typedef enum state
    stepWhereContinue,
    stepWhereAnd,
    stepWhereOr,
+   stepGroupBy,
+   stepGroupByComma,
 } state_t;
 
 void str_replace(char *target, const char *needle, const char *replacement)
@@ -1578,6 +1621,7 @@ void parse_sql(char *input_sql) {
    between_condition_t *current_between_condition = NULL;
    in_condition_t *current_in_condition = NULL;
    list_node_t *current_in_value_ptr = NULL;
+   list_node_t *current_group_by_ptr = NULL;
 
    while (ptr != NULL)
    {
@@ -2022,6 +2066,17 @@ void parse_sql(char *input_sql) {
                {
                   step = stepWhereOr;
                }
+               else if (strcmp(ptr, "GROUP") == 0)
+               {
+                  ptr = strtok(NULL, delim);
+                  if (strcmp(ptr, "BY") == 0) 
+                  {
+                     ptr = strtok(NULL, delim);
+                     query->group_by_ptr = (list_node_t *) calloc(1, sizeof(list_node_t));
+                     current_group_by_ptr = query->group_by_ptr;
+                     step = stepGroupBy;
+                  }
+               }
                break;
             }
          }
@@ -2059,6 +2114,37 @@ void parse_sql(char *input_sql) {
             current_condition_ptr = current_or_condition_ptr;
             ptr = strtok(NULL, delim);
             step = stepWhereField;
+            break;
+         }
+         case stepGroupBy:
+         {
+            char *field = calloc(1, sizeof(char *));
+            char *correspond_table_identifier = calloc(1, sizeof(char *));
+            parse_string(ptr, field, correspond_table_identifier);
+
+            current_group_by_ptr->val = field;
+            if (strcmp(correspond_table_identifier, "") != 0)
+            {
+               current_group_by_ptr->key = correspond_table_identifier;
+            }
+
+            ptr = strtok(NULL, delim);
+            if (ptr != NULL)
+            {
+               if (strcmp(ptr, ",") == 0)
+               {
+                  step = stepGroupByComma;
+               }
+            }
+            break;
+         }
+         case stepGroupByComma:
+         {
+            current_group_by_ptr->next = (list_node_t *) calloc(1, sizeof(list_node_t));
+            current_group_by_ptr = current_group_by_ptr->next;
+            
+            ptr = strtok(NULL, delim);
+            step = stepGroupBy;
             break;
          }
          default: 
@@ -2373,6 +2459,18 @@ void print_query_object(query_t *query)
    {
       print_where_condition(current_condition);
       current_condition = current_condition->next_condition;
+   }
+   printf("\n");
+
+   printf("The GROUP BY columns are ");
+   list_node_t *current_group_by_ptr = query->group_by_ptr;
+   while (current_group_by_ptr != NULL)
+   {
+      char *table = current_group_by_ptr->key == NULL ? "" : current_group_by_ptr->key;
+      char table_delim = current_group_by_ptr->key == NULL ? '\0' : '_';
+      printf("\"%s%c%s\", ", table, table_delim, current_group_by_ptr->val);
+      current_group_by_ptr = current_group_by_ptr->next;
+
    }
    printf("\n");
 }

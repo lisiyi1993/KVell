@@ -118,6 +118,7 @@ typedef struct query
    condition_t *condition_ptr;
    condition_t *and_condition_ptr;
    condition_t *or_condition_ptr;
+   list_node_t *group_by_ptr;
 } query_t;
 
 typedef struct table_struct {
@@ -137,6 +138,12 @@ struct column_info
    int index;
    data_type type;
 };
+
+typedef struct group_by
+{
+   char *item_array;
+   int last_index;
+} group_by_t;
 
 query_t* origin_query;
 query_t* query;
