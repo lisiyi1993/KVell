@@ -142,14 +142,17 @@ char *add_column_value(char *item, char *column_name, void *value, table_t *tabl
 
 static char* get_column_string_value(char* item, char* column_name, table_t *table) { 
    struct column_info *ci = ht_get(table->column_map, column_name);
-   
+   // printf("get_column_string_value\n");
+   // dump_shash(item);
    char *tmp = (char *) calloc(1, sizeof(char));
    switch (ci->type)
    {
    case INT:
+      // printf("get_column_string_value INT %d\n", ci->index);
       sprintf(tmp, "%ld", get_shash_uint(item, ci->index));
       break;
    case STRING:
+      // printf("get_column_string_value STRING %d\n", ci->index);
       sprintf(tmp, "%s", get_shash_string(item, ci->index));
       break;
    default:
@@ -956,6 +959,41 @@ static void do_injector_bg_work(struct workload *w, struct injector_queue *q, st
    }
 }
 
+bool is_in_list(list_node_t *list_node, list_node_t *node)
+{
+   list_node_t *cur = list_node;
+   while (cur != NULL)
+   {
+      if (strcmp(cur->val, node->val) == 0 && strcmp(cur->key, node->key) == 0)
+      {
+         return true;
+      }
+      cur = cur->next;
+   }
+   return false;
+}
+
+void add_str_to_set(hashset_t set, char *str)
+{
+   bool has_value = false;
+   hashset_itr_t iter = hashset_iterator(set);
+   
+   while(hashset_iterator_has_next(iter))
+   {
+      if (strcmp((char *) hashset_iterator_value(iter), str) == 0)
+      {
+         has_value = true;
+         break;
+      }
+      hashset_iterator_next(iter);
+   }
+
+   if (!has_value)
+   {
+      hashset_add(set, str);
+   }
+}
+
 static int injector_uid;
 
 static void _launch_sql_parser(struct workload *w, int test, int nb_requests, int zipfian) {
@@ -1369,8 +1407,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          }
       }
       condition = condition->next_condition;
+      if (condition != NULL)
+      {
+         tmp_column_index = 0;
+      }
 
-      tmp_column_index = 0;
       if (intermediate_node != NULL)
       {
          outcome_list = intermediate_node;
@@ -1388,14 +1429,17 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
       if (strcmp(origin_query->table_name_ptr->name, "lineitem") == 0) 
       {
          outcome_list = lineitem_result_list;
+         outcome_table = lineitem_table;
       }
       else if (strcmp(origin_query->table_name_ptr->name, "orders") == 0)
       {
          outcome_list = orders_result_list;
+         outcome_table = orders_table;
       }
       else if (strcmp(origin_query->table_name_ptr->name, "customer") == 0)
       {
          outcome_list = customer_result_list;
+         outcome_table = customer_table;
       }
    }
 
@@ -1407,19 +1451,27 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
       list_node_t *cur_field_ptr = origin_query->field_ptr;
       while (cur_field_ptr != NULL)
       {
-         char *outcome_value = get_column_string_value(cur_outcome_node->item, cur_field_ptr->val, outcome_table);
-         printf("%s: %s, ", cur_field_ptr->val, outcome_value);
+         if (cur_field_ptr->value_type == COLUMN_FIELD)
+         {
+            char *outcome_value = get_column_string_value(cur_outcome_node->item, cur_field_ptr->val, outcome_table);
+            printf("%s: %s, ", cur_field_ptr->val, outcome_value);
+         }
          cur_field_ptr = cur_field_ptr->next;
       }
       printf("\n");
+      cur_outcome_node = cur_outcome_node->next;
 
       total_num_item++;
-      cur_outcome_node = cur_outcome_node->next;
    }
 
-   ht *group_by_result_map = ht_create();
+   printf("\nafter grouping\n");
+   hashset_t group_by_key_set = hashset_create();
+
+   ht *group_by_result_map;
    if (origin_query->group_by_ptr != NULL) 
    {
+      // grouping
+      group_by_result_map = ht_create();
       cur_outcome_node = outcome_list;
       while (cur_outcome_node != NULL)
       {
@@ -1435,7 +1487,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          if (group_by_result == NULL)
          {
             group_by_result = (group_by_t *) calloc(1, sizeof(group_by_t));
-            group_by_result->item_array = (char *) calloc(1, sizeof(char) * total_num_item);
+            group_by_result->item_array = (char **) calloc(1, sizeof(char) * total_num_item);
             group_by_result->last_index = 0;
          }
 
@@ -1443,18 +1495,233 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          group_by_result->last_index += 1;
 
          ht_set(group_by_result_map, group_by_key, group_by_result);
+         add_str_to_set(group_by_key_set, group_by_key);
          cur_outcome_node = cur_outcome_node->next;
       }
-   }
 
-   hti group_by_result_map_iterator = ht_iterator(group_by_result_map);
-   while (ht_next(&group_by_result_map_iterator))
+      // hashset_itr_t group_by_key_set_iterator = hashset_iterator(group_by_key_set);
+      // while (hashset_iterator_has_next(group_by_key_set_iterator))
+      // {
+      //    char *group_by_key = (char *) hashset_iterator_value(group_by_key_set_iterator);
+      //    group_by_t *group_by_result = (group_by_t *) ht_get(group_by_result_map, group_by_key);
+
+      //    printf("%s: %d items \n", group_by_key, group_by_result->last_index);
+      //    hashset_iterator_next(group_by_key_set_iterator);
+      // }
+
+      // adding sum and avg to the column table
+      list_node_t *cur_field_ptr = origin_query->field_ptr;
+      while (cur_field_ptr != NULL)
+      {
+         if (is_in_list(origin_query->group_by_ptr, cur_field_ptr))
+         {
+            switch (cur_field_ptr->value_type)
+            {
+               case SUM:
+               {
+                  struct column_info *sum_ci = calloc(1, sizeof(sum_ci));
+                  sum_ci->index = tmp_column_index;
+                  sum_ci->type = INT;
+                  char *sum_colum = "";
+                  asprintf(&sum_colum, "SUM(%s)", cur_field_ptr->val);
+                  ht_set(outcome_table->column_map, sum_colum, sum_ci);
+                  tmp_column_index++;
+                  break;
+               }
+               case AVG:
+               {
+                  struct column_info *avg_ci = calloc(1, sizeof(avg_ci));
+                  avg_ci->index = tmp_column_index;
+                  avg_ci->type = INT;
+                  char *avg_colum = "";
+                  asprintf(&avg_colum, "AVG(%s)", cur_field_ptr->val);
+                  ht_set(outcome_table->column_map, avg_colum, avg_ci);
+                  tmp_column_index++;
+                  break;
+               }
+               default:
+                  break;
+            }        
+         }
+         
+         cur_field_ptr = cur_field_ptr->next;
+      }
+
+      // create group_outcome_list;
+      sql_result_node_t *group_by_outcome_list = NULL;
+      sql_result_node_t *current_group_by_node = NULL;
+      table_t *group_by_table = (table_t *) calloc(1, sizeof(table_t));
+      group_by_table->column_map = ht_create();
+      int group_by_index = 0;
+
+      // hti group_by_result_map_iterator = ht_iterator(group_by_result_map);
+      hashset_itr_t group_by_key_set_iter = hashset_iterator(group_by_key_set);
+      while (hashset_iterator_has_next(group_by_key_set_iter))
+      {
+         char *group_by_key = (char *) hashset_iterator_value(group_by_key_set_iter);
+         group_by_t *group_by_result = (group_by_t *) (group_by_t *) ht_get(group_by_result_map, group_by_key);
+
+         char *tmp_item = sql_parser_tmp(tmp_item_index);
+         list_node_t *cur_field_ptr = origin_query->field_ptr;
+         while (cur_field_ptr != NULL)
+         {
+            if (is_in_list(origin_query->group_by_ptr, cur_field_ptr))
+            {
+               switch (cur_field_ptr->value_type)
+               {
+                  case COLUMN_FIELD:
+                  {
+                     if (ht_get(group_by_table->column_map, cur_field_ptr->val) == NULL)
+                     {
+                        struct column_info *group_by_ci = calloc(1, sizeof(group_by_ci));
+                        struct column_info *outcome_ci = ht_get(outcome_table->column_map, cur_field_ptr->val);
+                        group_by_ci->type = outcome_ci->type;
+                        group_by_ci->index = group_by_index;
+                        group_by_index++;
+
+                        ht_set(group_by_table->column_map, cur_field_ptr->val, group_by_ci);
+                     }
+
+                     char *value = get_column_string_value(group_by_result->item_array[0], cur_field_ptr->val, outcome_table);
+
+                     struct column_info *group_by_ci = ht_get(group_by_table->column_map, cur_field_ptr->val);
+                     if (group_by_ci->type == STRING)
+                     {
+                        tmp_item = add_column_value(tmp_item, cur_field_ptr->val, value, group_by_table);
+                     }
+                     else if (group_by_ci->type == INT)
+                     {
+                        tmp_item = add_column_value(tmp_item, cur_field_ptr->val, atoi(value), group_by_table);
+                     }
+
+                     break;
+                  }
+                  case SUM:
+                  {
+                     char *sum_colum = "";
+                     asprintf(&sum_colum, "SUM(%s)", cur_field_ptr->val);
+
+                     if (ht_get(group_by_table->column_map, sum_colum) == NULL)
+                     {
+                        struct column_info *group_by_ci = calloc(1, sizeof(group_by_ci));
+                        struct column_info *outcome_ci = ht_get(outcome_table->column_map, sum_colum);
+                        group_by_ci->type = outcome_ci->type;
+                        group_by_ci->index = group_by_index;
+                        group_by_index++;
+
+                        ht_set(group_by_table->column_map, sum_colum, group_by_ci);
+                     }
+
+                     int sum = 0;
+                     for (int i=0; i<group_by_result->last_index; i++)
+                     {
+                        char *value = get_column_string_value(group_by_result->item_array[i], cur_field_ptr->val, outcome_table);
+                        sum += atoi(value);
+                     }
+                  
+                     tmp_item = add_column_value(tmp_item, sum_colum, sum, group_by_table);
+
+                     break;
+                  }
+                  case AVG:
+                  {
+                     char *avg_colum = "";
+                     asprintf(&avg_colum, "AVG(%s)", cur_field_ptr->val);
+
+                     if (ht_get(group_by_table->column_map, avg_colum) == NULL)
+                     {
+                        struct column_info *group_by_ci = calloc(1, sizeof(group_by_ci));
+                        struct column_info *outcome_ci = ht_get(outcome_table->column_map, avg_colum);
+                        group_by_ci->type = outcome_ci->type;
+                        group_by_ci->index = group_by_index;
+                        group_by_index++;
+
+                        ht_set(group_by_table->column_map, avg_colum, group_by_ci);
+                     }
+
+                     int sum = 0;
+                     for (int i=0; i<group_by_result->last_index; i++)
+                     {
+                        char *value = get_column_string_value(group_by_result->item_array[i], cur_field_ptr->val, outcome_table);
+                        sum += atoi(value);
+                     }
+                  
+                     tmp_item = add_column_value(tmp_item, cur_field_ptr->val, avg_colum, outcome_table);
+
+                     break;
+                  }
+                  default:
+                     break;
+               }
+            }
+            cur_field_ptr = cur_field_ptr->next;
+         }
+
+         if (group_by_outcome_list == NULL)
+         {
+            group_by_outcome_list = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            current_group_by_node = group_by_outcome_list;
+         }
+         else 
+         {
+            current_group_by_node->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            current_group_by_node = current_group_by_node->next;
+         }
+
+         current_group_by_node->item = tmp_item;
+         hashset_iterator_next(group_by_key_set_iter);
+      }
+
+      outcome_list = group_by_outcome_list;
+      outcome_table = group_by_table;
+   }
+   else 
    {
-      char *group_by_key = (char *) group_by_result_map_iterator.key;
-      group_by_t *group_by_result = (group_by_t *) group_by_result_map_iterator.value;
 
-      printf("%s: %d items \n", group_by_key, group_by_result->last_index);
    }
+
+   cur_outcome_node = outcome_list;
+   while (cur_outcome_node != NULL)
+   {
+      list_node_t *cur_field_ptr = origin_query->field_ptr;
+      while (cur_field_ptr != NULL)
+      {
+         char *field;
+         char *outcome_value;
+         if (cur_field_ptr->value_type == COLUMN_FIELD)
+         {
+            field = cur_field_ptr->val;
+            outcome_value = get_column_string_value(cur_outcome_node->item, cur_field_ptr->val, outcome_table);
+         }
+         else if (cur_field_ptr->value_type == SUM)
+         {
+            field = "";
+            asprintf(&field, "SUM(%s)", cur_field_ptr->val);
+            outcome_value = get_column_string_value(cur_outcome_node->item, cur_field_ptr->val, outcome_table);
+         }
+         else if (cur_field_ptr->value_type == AVG)
+         {
+            field = "";
+            asprintf(&field, "AVG(%s)", cur_field_ptr->val);
+            outcome_value = get_column_string_value(cur_outcome_node->item, cur_field_ptr->val, outcome_table);
+         }
+
+         printf("%s: %s, ", field, outcome_value);
+         cur_field_ptr = cur_field_ptr->next;
+      }
+      printf("\n");
+      cur_outcome_node = cur_outcome_node->next;
+   }
+
+   // hti group_by_result_map_iterator = ht_iterator(group_by_result_map);
+   // while (ht_next(&group_by_result_map_iterator))
+   // {
+   //    char *group_by_key = (char *) group_by_result_map_iterator.key;
+   //    group_by_t *group_by_result = (group_by_t *) group_by_result_map_iterator.value;
+
+   //    printf("%s: %d items \n", group_by_key, group_by_result->last_index);
+   // }
+
 }
 
 /* Generic interface */
@@ -1580,26 +1847,26 @@ void parse_string(char *p, char *str, char *correspond_table_identifier) {
     strcpy(str, t);
 }
 
-void add_str_to_set(hashset_t set, char *str)
-{
-   bool has_value = false;
-   hashset_itr_t iter = hashset_iterator(set);
+// void add_str_to_set(hashset_t set, char *str)
+// {
+//    bool has_value = false;
+//    hashset_itr_t iter = hashset_iterator(set);
    
-   while(hashset_iterator_has_next(iter))
-   {
-      if (strcmp((char *) hashset_iterator_value(iter), str) == 0)
-      {
-         has_value = true;
-         break;
-      }
-      hashset_iterator_next(iter);
-   }
+//    while(hashset_iterator_has_next(iter))
+//    {
+//       if (strcmp((char *) hashset_iterator_value(iter), str) == 0)
+//       {
+//          has_value = true;
+//          break;
+//       }
+//       hashset_iterator_next(iter);
+//    }
 
-   if (!has_value)
-   {
-      hashset_add(set, str);
-   }
-}
+//    if (!has_value)
+//    {
+//       hashset_add(set, str);
+//    }
+// }
 
 void parse_sql(char *input_sql) {
    char delim[] = " ";
@@ -1643,10 +1910,34 @@ void parse_sql(char *input_sql) {
          }
          case stepSelectField: 
          {
-            // current_field_ptr->val = ptr;
+            char *value = NULL;
+            if (strncmp("SUM(", ptr, 4) == 0)
+            {
+               current_field_ptr->value_type = SUM;
+               value = calloc(1, strlen(ptr) - 5);
+               for (int i=4; i<strlen(ptr)-1; i++)
+               {
+                  value[i-4] = ptr[i];
+               }
+            }
+            else if (strncmp("AVG(", ptr, 4) == 0) 
+            {
+               current_field_ptr->value_type = AVG;
+               value = calloc(1, strlen(ptr) - 5);
+               for (int i=4; i<strlen(ptr)-1; i++)
+               {
+                  value[i-4] = ptr[i];
+               }
+            }
+            else
+            {
+               current_field_ptr->value_type = COLUMN_FIELD;
+               value = ptr;
+            }
+
             char *field = calloc(1, sizeof(char *));
             char *correspond_table_identifier = calloc(1, sizeof(char *));
-            parse_string(ptr, field, correspond_table_identifier);
+            parse_string(value, field, correspond_table_identifier);
 
             current_field_ptr->val = field;
             if (strcmp(correspond_table_identifier, "") != 0)
@@ -1660,7 +1951,7 @@ void parse_sql(char *input_sql) {
                }
                add_str_to_set(table_columns, field);
             }
-
+            
             ptr = strtok(NULL, delim);
             if (strcmp(ptr, ",") == 0) 
             {
@@ -2079,6 +2370,7 @@ void parse_sql(char *input_sql) {
                }
                break;
             }
+            break;
          }
          case stepWhereAnd: 
          {
@@ -2127,6 +2419,7 @@ void parse_sql(char *input_sql) {
             {
                current_group_by_ptr->key = correspond_table_identifier;
             }
+            current_group_by_ptr->value_type = COLUMN_FIELD;
 
             ptr = strtok(NULL, delim);
             if (ptr != NULL)

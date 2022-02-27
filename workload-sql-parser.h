@@ -13,22 +13,6 @@
 
 size_t get_db_size_sql_parser(void);
 
-ht *sql_tables_columns;
-ht *table_identifier_to_table_name;
-
-typedef struct result_node
-{
-   char *item;
-   struct result_node *next;
-} sql_result_node_t;
-
-typedef struct node 
-{
-   char *key;
-   char *val;
-   struct node *next;
-} list_node_t;
-
 typedef enum type 
 {
    SELECT
@@ -51,8 +35,24 @@ typedef enum value_type
 {
    CONSTANT,
    ARITHMETIC,
+   SUM,
+   AVG,
    COLUMN_FIELD
 } value_t;
+
+typedef struct node 
+{
+   char *key;
+   char *val;
+   value_t value_type;
+   struct node *next;
+} list_node_t;
+
+typedef struct result_node
+{
+   char *item;
+   struct result_node *next;
+} sql_result_node_t;
 
 typedef struct arithmetic_condition
 {
@@ -141,9 +141,12 @@ struct column_info
 
 typedef struct group_by
 {
-   char *item_array;
+   char **item_array;
    int last_index;
 } group_by_t;
+
+ht *sql_tables_columns;
+ht *table_identifier_to_table_name;
 
 query_t* origin_query;
 query_t* query;
