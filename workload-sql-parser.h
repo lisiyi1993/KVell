@@ -44,6 +44,7 @@ typedef struct node
 {
    char *key;
    char *val;
+   char *as;
    value_t value_type;
    struct node *next;
 } list_node_t;

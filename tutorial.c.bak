@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 
    // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998%' AND DISCOUNT BETWEEN 0 AND 0 + 500";
    // char input_sql[] = "SELECT l_ORDERKEY , l_TAX , l_DISCOUNT , l_RETURNFLAG , l_SHIPDATE FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY";
-   char input_sql[] = "SELECT l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY GROUP BY l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY";
+   char input_sql[] = "SELECT l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY , SUM(l_TAX) AS revenue FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY AND l_SHIPDATE > 1998-09-03 AND o_ORDERDATE < 1998-08-02 GROUP BY l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY";
    // char input_sql[] = "SELECT c_CUSTKEY FROM customer";
    // char input_sql[] = "SELECT l_ORDERKEY FROM lineitem";
    
