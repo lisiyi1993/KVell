@@ -168,7 +168,7 @@ static char* get_column_string_value(char* item, char* column_name, table_t *tab
    return tmp;
 }
 
-bool compare_column_value(char *item, char *column_name, operator_t operator, void *expected_value, bool not, table_t *table) {
+bool compare_column_value(char *item, char *column_name, operator_t operator, void *value_to_compare, bool not, table_t *table) {
    struct column_info *ci = ht_get(table->column_map, column_name);
    void *item_value = get_column_string_value(item, column_name, table);
 
@@ -180,10 +180,10 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
          switch (ci->type)
          {
             case INT:
-               res = get_shash_uint(item, ci->index) == atoi(expected_value);
+               res = get_shash_uint(item, ci->index) == atoi(value_to_compare);
                break;
             case STRING:
-               res = strcmp(get_shash_string(item, ci->index), (char *) expected_value) == 0;
+               res = strcmp(get_shash_string(item, ci->index), (char *) value_to_compare) == 0;
                break;
             default:
                break;
@@ -195,10 +195,10 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
          switch (ci->type)
          {
             case INT:
-               res = get_shash_uint(item, ci->index) > atoi(expected_value);
+               res = get_shash_uint(item, ci->index) > atoi(value_to_compare);
                break;
             case STRING:
-               res = strcmp(get_shash_string(item, ci->index), (char *) expected_value) > 0;
+               res = strcmp(get_shash_string(item, ci->index), (char *) value_to_compare) > 0;
                break;
             default:
                break;
@@ -210,10 +210,10 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
          switch (ci->type)
          {
             case INT:
-               res = get_shash_uint(item, ci->index) < atoi(expected_value);
+               res = get_shash_uint(item, ci->index) < atoi(value_to_compare);
                break;
             case STRING:
-               res = strcmp(get_shash_string(item, ci->index), (char *) expected_value) < 0;
+               res = strcmp(get_shash_string(item, ci->index), (char *) value_to_compare) < 0;
                break;
             default:
                break;
@@ -225,10 +225,10 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
          switch (ci->type)
          {
             case INT:
-               res = get_shash_uint(item, ci->index) >= atoi(expected_value);
+               res = get_shash_uint(item, ci->index) >= atoi(value_to_compare);
                break;
             case STRING:
-               res = strcmp(get_shash_string(item, ci->index), (char *) expected_value) >= 0;
+               res = strcmp(get_shash_string(item, ci->index), (char *) value_to_compare) >= 0;
                break;
             default:
                break;
@@ -240,10 +240,10 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
          switch (ci->type)
          {
             case INT:
-               res = get_shash_uint(item, ci->index) <= atoi(expected_value);
+               res = get_shash_uint(item, ci->index) <= atoi(value_to_compare);
                break;
             case STRING:
-               res = strcmp(get_shash_string(item, ci->index), (char *) expected_value) <= 0;
+               res = strcmp(get_shash_string(item, ci->index), (char *) value_to_compare) <= 0;
                break;
             default:
                break;
@@ -255,10 +255,10 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
          switch (ci->type)
          {
             case INT:
-               res = get_shash_uint(item, ci->index) != atoi(expected_value);
+               res = get_shash_uint(item, ci->index) != atoi(value_to_compare);
                break;
             case STRING:
-               res = strcmp(get_shash_string(item, ci->index), (char *) expected_value) != 0;
+               res = strcmp(get_shash_string(item, ci->index), (char *) value_to_compare) != 0;
                break;
             default:
                break;
@@ -267,7 +267,7 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
       }
       case LIKE:
       {
-         int reti = regexec(&(((like_condition_t *) expected_value)->regex), get_shash_string(item, ci->index), 0, NULL, 0);
+         int reti = regexec(&(((like_condition_t *) value_to_compare)->regex), get_shash_string(item, ci->index), 0, NULL, 0);
          if (reti == 0) {
             res = true;
          }
@@ -278,7 +278,7 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
       }
       case BETWEEN:
       {
-         between_condition_t *between_condition = (between_condition_t *) expected_value;
+         between_condition_t *between_condition = (between_condition_t *) value_to_compare;
          long item_value = get_shash_uint(item, ci->index);
          switch (ci->type)
          {
@@ -292,7 +292,7 @@ bool compare_column_value(char *item, char *column_name, operator_t operator, vo
       }
       case IN: 
       {
-         list_node_t *cur_node = ((in_condition_t *) expected_value)->match_ptr;
+         list_node_t *cur_node = ((in_condition_t *) value_to_compare)->match_ptr;
          res = false;
          while (cur_node != NULL) 
          {
@@ -1483,7 +1483,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
       while (cur_outcome_node != NULL)
       {
          char *group_by_key = "";
-         list_node_t *cur_group_by_column = origin_query->group_by_ptr;
+         group_by_node_t *cur_group_by_column = origin_query->group_by_ptr;
          while (cur_group_by_column != NULL)
          {
             asprintf(&group_by_key, "%s_%s", group_by_key, get_column_string_value(cur_outcome_node->item, cur_group_by_column->val, outcome_table));
@@ -1730,6 +1730,79 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
    //    printf("%s\n", (char *)outcome_table_iterator.key);
    // }
    // printf("\n");
+   
+   // order the outcome list by order by columns
+   if (origin_query->order_by_ptr != NULL)
+   {
+      sql_result_node_t *dummy_head = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+      dummy_head->next = outcome_list;
+
+      // bubble sort
+      bool to_stop;
+      while (true)
+      {
+         to_stop = true;
+
+         sql_result_node_t *p1 = dummy_head;
+         sql_result_node_t *p2 = dummy_head->next;
+         sql_result_node_t *p3 = dummy_head->next->next;
+         
+         while (p2 != NULL && p3 != NULL)
+         {
+            bool to_swap;
+            order_by_node_t *current_order_by_node = origin_query->order_by_ptr;
+            while (current_order_by_node != NULL)
+            {
+               operator_t op;
+               if (current_order_by_node->desc) 
+               {
+                  op = LT;
+               }
+               else
+               {
+                  op = GT;
+               }
+
+               char *value_to_compare = get_column_string_value(p3->item, current_order_by_node->val, outcome_table);
+               to_swap = compare_column_value(p2->item, current_order_by_node->val, op, value_to_compare, false, outcome_table);
+
+               if (to_swap) 
+               {
+                  break;
+               }
+               else
+               {
+                  bool is_eq = compare_column_value(p2->item, current_order_by_node->val, EQ, value_to_compare, false, outcome_table);
+                  if (!is_eq)
+                  {
+                     break; 
+                  }
+                  current_order_by_node = current_order_by_node->next;
+               }
+            }
+
+            if (to_swap)
+            {
+               p1->next = p3;
+               p2->next = p3->next;
+               p3->next = p2;
+               to_stop = false;
+            }
+
+            p1 = p1->next;
+            p2 = p1->next;
+            p3 = p2->next;
+         }
+
+         if (to_stop)
+         {
+            break;
+         }
+      }
+
+      outcome_list = dummy_head->next;
+   }
+   
 
    cur_outcome_node = outcome_list;
    while (cur_outcome_node != NULL)
@@ -1856,6 +1929,8 @@ typedef enum state
    stepWhereOr,
    stepGroupBy,
    stepGroupByComma,
+   stepOrderBy,
+   stepOrderByComma,
 } state_t;
 
 void str_replace(char *target, const char *needle, const char *replacement)
@@ -1935,7 +2010,8 @@ void parse_sql(char *input_sql) {
    between_condition_t *current_between_condition = NULL;
    in_condition_t *current_in_condition = NULL;
    list_node_t *current_in_value_ptr = NULL;
-   list_node_t *current_group_by_ptr = NULL;
+   group_by_node_t *current_group_by_ptr = NULL;
+   order_by_node_t *current_order_by_ptr = NULL;
 
    while (ptr != NULL)
    {
@@ -2424,7 +2500,7 @@ void parse_sql(char *input_sql) {
                   if (strcmp(ptr, "BY") == 0) 
                   {
                      ptr = strtok(NULL, delim);
-                     query->group_by_ptr = (list_node_t *) calloc(1, sizeof(list_node_t));
+                     query->group_by_ptr = (group_by_node_t *) calloc(1, sizeof(group_by_node_t));
                      current_group_by_ptr = query->group_by_ptr;
                      step = stepGroupBy;
                   }
@@ -2480,7 +2556,6 @@ void parse_sql(char *input_sql) {
             {
                current_group_by_ptr->key = correspond_table_identifier;
             }
-            current_group_by_ptr->value_type = COLUMN_FIELD;
 
             ptr = strtok(NULL, delim);
             if (ptr != NULL)
@@ -2489,16 +2564,71 @@ void parse_sql(char *input_sql) {
                {
                   step = stepGroupByComma;
                }
+               else if (strcmp(ptr, "ORDER") == 0)
+               {
+                  ptr = strtok(NULL, delim);
+                  if (strcmp(ptr, "BY") == 0)
+                  {
+                     ptr = strtok(NULL, delim);
+                     query->order_by_ptr = (order_by_node_t *) calloc(1, sizeof(order_by_node_t));
+                     current_order_by_ptr = query->order_by_ptr;
+                     step = stepOrderBy;
+                  }
+               }
             }
             break;
          }
          case stepGroupByComma:
          {
-            current_group_by_ptr->next = (list_node_t *) calloc(1, sizeof(list_node_t));
+            current_group_by_ptr->next = (group_by_node_t *) calloc(1, sizeof(group_by_node_t));
             current_group_by_ptr = current_group_by_ptr->next;
             
             ptr = strtok(NULL, delim);
             step = stepGroupBy;
+            break;
+         }
+         case stepOrderBy:
+         {
+            current_order_by_ptr->desc = false;
+            char *field = calloc(1, sizeof(char *));
+            char *correspond_table_identifier = calloc(1, sizeof(char *));
+            parse_string(ptr, field, correspond_table_identifier);
+            
+            current_order_by_ptr->val = field;
+            if (strcmp(correspond_table_identifier, "") != 0)
+            {
+               current_order_by_ptr->key = correspond_table_identifier;
+            }
+
+            ptr = strtok(NULL, delim);
+            if (ptr != NULL) 
+            {
+               if (strcmp(ptr, ",") == 0)
+               {
+                  step = stepOrderByComma;
+               }
+               else if (strcmp(ptr, "DESC") == 0)
+               {
+                  current_order_by_ptr->desc = true;
+                  ptr = strtok(NULL, delim);
+                  if (ptr != NULL)
+                  {
+                     if (strcmp(ptr, ",") == 0)
+                     {
+                        step = stepOrderByComma;
+                     }
+                  }
+               }
+            }
+            break;
+         }
+         case stepOrderByComma:
+         {
+            current_order_by_ptr->next = (order_by_node_t *) calloc(1, sizeof(order_by_node_t));
+            current_order_by_ptr = current_order_by_ptr->next;
+            
+            ptr = strtok(NULL, delim);
+            step = stepOrderBy;
             break;
          }
          default: 
@@ -2840,7 +2970,7 @@ void print_query_object(query_t *query)
    printf("\n");
 
    printf("The GROUP BY columns are ");
-   list_node_t *current_group_by_ptr = query->group_by_ptr;
+   group_by_node_t *current_group_by_ptr = query->group_by_ptr;
    while (current_group_by_ptr != NULL)
    {
       char *table = current_group_by_ptr->key == NULL ? "" : current_group_by_ptr->key;
@@ -2848,6 +2978,25 @@ void print_query_object(query_t *query)
       printf("\"%s%c%s\", ", table, table_delim, current_group_by_ptr->val);
       current_group_by_ptr = current_group_by_ptr->next;
 
+   }
+   printf("\n");
+
+   printf("The ORDER BY columns are ");
+   order_by_node_t *current_order_by_ptr = query->order_by_ptr;
+   while (current_order_by_ptr != NULL)
+   {
+      char *table = current_order_by_ptr->key == NULL ? "" : current_order_by_ptr->key;
+      char table_delim = current_order_by_ptr->key == NULL ? '\0' : '_';
+      if (current_order_by_ptr->desc)
+      {
+         printf("\"%s%c%s DESC\", ", table, table_delim, current_order_by_ptr->val);
+      }
+      else
+      {
+         printf("\"%s%c%s\", ", table, table_delim, current_order_by_ptr->val);
+      }
+      
+      current_order_by_ptr = current_order_by_ptr->next;
    }
    printf("\n");
 }

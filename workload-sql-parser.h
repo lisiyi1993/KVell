@@ -49,6 +49,21 @@ typedef struct node
    struct node *next;
 } list_node_t;
 
+typedef struct group_by_node 
+{
+   char *key;
+   char *val;
+   struct order_by_node *next;
+} group_by_node_t;
+
+typedef struct order_by_node 
+{
+   char *key;
+   char *val;
+   bool desc;
+   struct order_by_node *next;
+} order_by_node_t;
+
 typedef struct result_node
 {
    char *item;
@@ -119,7 +134,8 @@ typedef struct query
    condition_t *condition_ptr;
    condition_t *and_condition_ptr;
    condition_t *or_condition_ptr;
-   list_node_t *group_by_ptr;
+   group_by_node_t *group_by_ptr;
+   order_by_node_t *order_by_ptr;
 } query_t;
 
 typedef struct table_struct {
