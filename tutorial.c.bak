@@ -46,19 +46,19 @@ int main(int argc, char **argv) {
    };
 
    char orders_columns[][100] = {
-      "TABLE", "ORDERKEY", "ORDERDATE", "SHIPPRIORITY", "CUSTKEY"
+      "TABLE", "ORDERKEY", "CUSTKEY", "ORDERSTATUS", "TOTALPRICE", "ORDERDATE", "ORDERPRIORITY", "CLERK", "SHIPPRIORITY"
    };
    
    char orders_columns_type[][100] = {
-      "STRING", "INT", "STRING", "STRING", "INT"
+      "STRING", "INT",  "INT", "STRING", "INT", "STRING", "STRING", "STRING", "STRING"
    };
 
    char customer_columns[][100] = {
-      "TABLE", "CUSTKEY", "NAME"
+      "TABLE", "CUSTKEY", "NAME", "ADDRESS", "NATIONKEY", "PHONE", "ACCTBAL", "MKTSEGMENT"
    };
 
    char customer_columns_type[][100] = {
-      "STRING", "INT", "STRING"
+      "STRING", "INT", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING"
    };
 
    create_sql_tables_columns();

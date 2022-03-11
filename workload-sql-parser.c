@@ -544,14 +544,14 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "LINESTATUS", "3", lineitem_table);
       }
       
-      item = add_column_value(item, "PARTKEY", -1, lineitem_table);
-      item = add_column_value(item, "SUPPKEY", -1, lineitem_table);
-      item = add_column_value(item, "EXTENDEDPRICE", -1, lineitem_table);
-      item = add_column_value(item, "COMMITDATE", "NULL", lineitem_table);
-      item = add_column_value(item, "RECEIPTDATE", "NULL", lineitem_table);
-      item = add_column_value(item, "SHIPINSTRUCT", "NULL", lineitem_table);
-      item = add_column_value(item, "SHIPMODE", "NULL", lineitem_table);
-      item = add_column_value(item, "COMMENT", "NULL", lineitem_table);
+      item = add_column_value(item, "PARTKEY", DEFAULT_INT_VALUE, lineitem_table);
+      item = add_column_value(item, "SUPPKEY", DEFAULT_INT_VALUE, lineitem_table);
+      item = add_column_value(item, "EXTENDEDPRICE", DEFAULT_INT_VALUE, lineitem_table);
+      item = add_column_value(item, "COMMITDATE", DEFAULT_STRING_VALUE, lineitem_table);
+      item = add_column_value(item, "RECEIPTDATE", DEFAULT_STRING_VALUE, lineitem_table);
+      item = add_column_value(item, "SHIPINSTRUCT", DEFAULT_STRING_VALUE, lineitem_table);
+      item = add_column_value(item, "SHIPMODE", DEFAULT_STRING_VALUE, lineitem_table);
+      item = add_column_value(item, "COMMENT", DEFAULT_STRING_VALUE, lineitem_table);
       // dump_shash(item);
       return item;
       // return sql_parser_lineitem(uid);
@@ -562,8 +562,12 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       char *item = sql_parser_order(uid);
       item = add_column_value(item, "TABLE", "orders", orders_table);
       item = add_column_value(item, "ORDERKEY", uid % NB_ORDERS, orders_table);
-      item = add_column_value(item, "ORDERDATE", "1998-08-01", orders_table);
       item = add_column_value(item, "CUSTKEY", rand_between(0, NB_CUSTOMER + 4), orders_table);
+      item = add_column_value(item, "ORDERSTATUS", DEFAULT_STRING_VALUE, orders_table);
+      item = add_column_value(item, "TOTALPRICE", DEFAULT_INT_VALUE, orders_table);
+      item = add_column_value(item, "ORDERDATE", "1998-08-01", orders_table);
+      item = add_column_value(item, "ORDERPRIORITY", DEFAULT_STRING_VALUE, orders_table);
+      item = add_column_value(item, "CLERK", DEFAULT_STRING_VALUE, orders_table);
 
       if (uid % 2 == 0)
       {
@@ -582,6 +586,11 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       char *item = sql_parser_customer(uid);
       item = add_column_value(item, "TABLE", "customer", customer_table);
       item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
+      item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+      item = add_column_value(item, "NATIONKEY", DEFAULT_STRING_VALUE, customer_table);
+      item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+      item = add_column_value(item, "ACCTBAL", DEFAULT_STRING_VALUE, customer_table);
+      item = add_column_value(item, "MKTSEGMENT", DEFAULT_STRING_VALUE, customer_table);
       
       if (uid % NB_CUSTOMER == 0)
       {

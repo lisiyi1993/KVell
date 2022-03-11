@@ -6,8 +6,10 @@
 #ifndef WORKLOAD_TPCH
 #define WORKLOAD_TPCH
 
+#define DEFAULT_INT_VALUE -1
+#define DEFAULT_STRING_VALUE ""
 
-#define NB_LINEITEMS 50
+#define NB_LINEITEMS 100
 #define NB_ORDERS 10
 #define NB_CUSTOMER 4
 
