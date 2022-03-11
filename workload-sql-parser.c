@@ -2666,6 +2666,7 @@ void parse_sql(char *input_sql) {
       {
          current_field_ptr->val = (char *) hashset_iterator_value(table_columns_iter);
          current_field_ptr->key = (char *) sql_tables_columns_iterator.key;
+         current_field_ptr->value_type = COLUMN_FIELD;
 
          // printf("%s ", current_field_ptr->val);
          hashset_iterator_next(table_columns_iter);
@@ -2907,7 +2908,7 @@ void print_query_object(query_t *query)
       char *table = current_field->key == NULL ? "" : current_field->key;
       char table_delim = current_field->key == NULL ? '\0' : '_';
       
-      char *field_value = "";
+      char *field_value;
 
       switch (current_field->value_type)
       {
@@ -2918,7 +2919,7 @@ void print_query_object(query_t *query)
          asprintf(&field_value, "AVG(\"%s%c%s\")", table, table_delim, current_field->val);
          break;
       case COLUMN_FIELD:
-         asprintf(&field_value, "\"%s%c%s\", ", table, table_delim, current_field->val);
+         asprintf(&field_value, "\"%s%c%s\"", table, table_delim, current_field->val);
          break;
       default:
          break;
