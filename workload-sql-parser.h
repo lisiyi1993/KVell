@@ -11,7 +11,9 @@
 
 #define NB_LINEITEMS 100
 #define NB_ORDERS 10
-#define NB_CUSTOMER 4
+#define NB_CUSTOMER 24
+#define NB_NATION 6
+#define NB_REGION 3
 
 size_t get_db_size_sql_parser(void);
 
@@ -174,10 +176,10 @@ query_t *sub_query_list[2];
 ht *sub_queries_map;
 
 table_t *lineitem_table;
-
 table_t *orders_table;
-
 table_t *customer_table;
+table_t *nation_table;
+table_t *region_table;
 
 sql_result_node_t *lineitem_result_list;
 sql_result_node_t *cur_lineitem_result_item;
@@ -193,8 +195,10 @@ void parse_sql(char *ptr);
 void print_query_object(query_t *query);
 
 void create_lineitem_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
-
 void create_orders_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
+void create_cutomer_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
+void create_nation_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
+void create_region_table(long num_columns, char input_columns[][100], char input_columns_type[][100]);
 
 void create_sql_tables_columns();
 

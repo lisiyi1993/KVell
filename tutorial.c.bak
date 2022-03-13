@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
    };
    
    char orders_columns_type[][100] = {
-      "STRING", "INT",  "INT", "STRING", "INT", "STRING", "STRING", "STRING", "STRING"
+      "STRING", "INT",  "INT", "STRING", "INT", "STRING", "STRING", "STRING", "INT"
    };
 
    char customer_columns[][100] = {
@@ -61,15 +61,33 @@ int main(int argc, char **argv) {
       "STRING", "INT", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING"
    };
 
+   char nation_columns[][100] = {
+      "TABLE", "NATIONKEY", "NATIONNAME", "REGIONKEY"
+   };
+
+   char nation_columns_type[][100] = {
+      "STRING", "STRING", "STRING", "STRING"
+   };
+
+   char region_columns[][100] = {
+      "TABLE", "REGIONKEY", "REGIONNAME"
+   };
+
+   char region_columns_type[][100] = {
+      "STRING", "STRING", "STRING"
+   };
+
    create_sql_tables_columns();
    create_table_identifier_to_table_name();
    create_lineitem_table(sizeof(lineitem_columns)/100, lineitem_columns, lineitem_columns_type);
    create_orders_table(sizeof(orders_columns)/100, orders_columns, orders_columns_type);
    create_cutomer_table(sizeof(customer_columns)/100, customer_columns, customer_columns_type);
+   create_nation_table(sizeof(nation_columns)/100, nation_columns, nation_columns_type);
+   create_region_table(sizeof(region_columns)/100, region_columns, region_columns_type);
 
    // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998%' AND DISCOUNT BETWEEN 0 AND 0 + 500";
    // char input_sql[] = "SELECT l_ORDERKEY , l_TAX , l_DISCOUNT , l_RETURNFLAG , l_SHIPDATE FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY";
-   char input_sql[] = "SELECT l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY , SUM(l_TAX) AS revenue FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY AND l_SHIPDATE > 1998-09-03 AND o_ORDERDATE < 1998-08-02 GROUP BY l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY ORDER BY revenue DESC , o_orderdate";
+   char input_sql[] = "SELECT l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY , SUM(l_TAX) AS revenue FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY AND l_SHIPDATE > 2021-09-03 AND o_ORDERDATE < 2021-11-05 GROUP BY l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY ORDER BY revenue DESC , o_orderdate";
    // char input_sql[] = "SELECT c_CUSTKEY FROM customer";
    // char input_sql[] = "SELECT l_ORDERKEY FROM lineitem";
    
