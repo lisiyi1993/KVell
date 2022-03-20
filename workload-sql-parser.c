@@ -703,7 +703,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Rene Howe", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3242 Goldcliff Circle", customer_table);
          item = add_column_value(item, "PHONE", "(418)681-5378", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
@@ -711,7 +711,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Doreen Burns", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "642 Arbor Court", customer_table);
          item = add_column_value(item, "PHONE", "(514)552-6526", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
@@ -719,7 +719,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Billy Park", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "1866 Wright Court", customer_table);
          item = add_column_value(item, "PHONE", "(613)524-2588", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
@@ -727,7 +727,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Ray Audet", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "1085 Par Drive", customer_table);
          item = add_column_value(item, "PHONE", "(226)203-7946", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
@@ -735,7 +735,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Darcy Lamarre", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "2910 State Street", customer_table);
          item = add_column_value(item, "PHONE", "(819)728-7047", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
@@ -743,7 +743,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Victoria Li", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "1478 Peck Street", customer_table);
          item = add_column_value(item, "PHONE", "(705)571-3996", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
@@ -751,7 +751,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Doreen Wiens", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3523 August Lane", customer_table);
          item = add_column_value(item, "PHONE", "(905)366-4553", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
@@ -759,7 +759,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Anton McNeil", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "1723 Murphy Court", customer_table);
          item = add_column_value(item, "PHONE", "(204)382-2614", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
@@ -767,7 +767,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Faye Hutchinson", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3018 Duke Lane", customer_table);
          item = add_column_value(item, "PHONE", "(587)324-5441", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
@@ -775,7 +775,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Graham Kumar", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3637 Liberty Street", customer_table);
          item = add_column_value(item, "PHONE", "(418)387-5161", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
@@ -783,7 +783,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Rob Meunier", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "2707 Webster Street", customer_table);
          item = add_column_value(item, "PHONE", "(780)585-6680", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
@@ -791,7 +791,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Corey Barr", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3762 Emma Street", customer_table);
          item = add_column_value(item, "PHONE", "(819)383-2600", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
@@ -799,7 +799,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Sean Fowler", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "1521 Colonial Drive", customer_table);
          item = add_column_value(item, "PHONE", "(905)315-3888", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
@@ -807,7 +807,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Morgan Simon", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "64 Straford Park", customer_table);
          item = add_column_value(item, "PHONE", "(705)594-5525", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
@@ -815,7 +815,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Olive Charbonneau", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "593 Carriage Court", customer_table);
          item = add_column_value(item, "PHONE", "(902)265-2507", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
@@ -823,7 +823,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Graham Major", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "2418 McVaney Road", customer_table);
          item = add_column_value(item, "PHONE", "(306)279-6029", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
@@ -831,7 +831,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Bonnie Lachance", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3304 Maple Court", customer_table);
          item = add_column_value(item, "PHONE", "(418)348-9187", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
@@ -839,7 +839,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Margaret Wu", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3353 Church Street", customer_table);
          item = add_column_value(item, "PHONE", "(867)580-5248", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
@@ -847,7 +847,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "James Baxter", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "1893 Jennifer Lane", customer_table);
          item = add_column_value(item, "PHONE", "(604)382-4350", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
@@ -855,7 +855,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Sarah Doucet", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "2514 Rinehart Road", customer_table);
          item = add_column_value(item, "PHONE", "(416)596-1275", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
@@ -863,7 +863,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Janice McGregor", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "4887 Red Bud Lane", customer_table);
          item = add_column_value(item, "PHONE", "(780)535-6149", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
@@ -871,7 +871,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Herb Ford", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3978 Quilly Lane", customer_table);
          item = add_column_value(item, "PHONE", "(905)847-1235", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
@@ -879,7 +879,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Cory McMillan", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "3675 Cedar Lane", customer_table);
          item = add_column_value(item, "PHONE", "(902)569-8853", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
@@ -887,7 +887,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Jared Patry", customer_table);
-         item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "ADDRESS", "2764 Harter Street", customer_table);
          item = add_column_value(item, "PHONE", "(226)494-7698", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
@@ -1672,7 +1672,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          
          char *table2_name = ht_get(table_identifier_to_table_name, comparison_condition->table);
          char *field2_name = (char *) comparison_condition->value;
-         printf("%s_%s = %s_%s\n", table1_name, field1_name, table2_name, field2_name);
+         // printf("%s_%s = %s_%s\n", table1_name, field1_name, table2_name, field2_name);
 
          sql_result_node_t *cur1_result_node;
          table_t *table1;
@@ -1844,12 +1844,12 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          tmp_column_index = 0;
       }
 
-      if (intermediate_node == NULL) {
-         printf("yes intermediate_node is null\n");
-      }
-      else {
-         printf("yes intermediate_node is not null\n");
-      }
+      // if (intermediate_node == NULL) {
+      //    printf("yes intermediate_node is null\n");
+      // }
+      // else {
+      //    printf("yes intermediate_node is not null\n");
+      // }
 
       if (intermediate_node != NULL)
       {
