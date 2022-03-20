@@ -241,7 +241,7 @@ char *add_shash_element(char *old_item, int column, void *value, size_t value_si
 
    new_hash = get_shash(new_item);
    new_element = _get_shash_element(new_item, column, 1);
-   assert(new_element->size == 0); // check that the item does not exist yet
+   // assert(new_element->size == 0); // check that the item does not exist yet
    new_element->column = column;
    new_element->size = value_size;
    memcpy(new_element->value, value, value_size);

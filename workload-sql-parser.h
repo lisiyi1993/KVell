@@ -190,6 +190,9 @@ sql_result_node_t *cur_orders_result_item;
 sql_result_node_t *customer_result_list;
 sql_result_node_t *cur_customer_result_item;
 
+sql_result_node_t *nation_result_list;
+sql_result_node_t *cur_nation_result_item;
+
 void parse_sql(char *ptr);
 
 void print_query_object(query_t *query);

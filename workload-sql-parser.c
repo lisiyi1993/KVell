@@ -198,10 +198,10 @@ static char* get_column_string_value(char* item, char* column_name, table_t *tab
    // dump_shash(item);
    char *tmp = (char *) calloc(1, sizeof(char));
 
-   // if (ci == NULL)
-   // {
-   //    printf("ci is null, column_name = %s\n", column_name);
-   // }
+   if (ci == NULL)
+   {
+      printf("ci is null, column_name = %s\n", column_name);
+   }
 
    switch (ci->type)
    {
@@ -606,27 +606,33 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       item = add_column_value(item, "LINENUMBER", uid & NB_LINEITEMS, lineitem_table);
       item = add_column_value(item, "QUANTITY", rand_between(1, 100), lineitem_table);
       item = add_column_value(item, "DISCOUNT", rand_between(100, 999), lineitem_table);
-      item = add_column_value(item, "TAX", rand_between(100, 999), lineitem_table);
+      item = add_column_value(item, "TAX", rand_between(1, 30), lineitem_table);
 
       if (uid % 3 == 0) {
          item = add_column_value(item, "SHIPDATE", "2021-09-03", lineitem_table);
-         item = add_column_value(item, "RETURNFLAG", "A", lineitem_table);
          item = add_column_value(item, "LINESTATUS", "1", lineitem_table);
       }
       else if (uid % 3 == 1) {
          item = add_column_value(item, "SHIPDATE", "2021-09-04", lineitem_table);
-         item = add_column_value(item, "RETURNFLAG", "B", lineitem_table);
          item = add_column_value(item, "LINESTATUS", "2", lineitem_table);
       }
       else {
          item = add_column_value(item, "SHIPDATE", "2021-11-05", lineitem_table);
-         item = add_column_value(item, "RETURNFLAG", "C", lineitem_table);
          item = add_column_value(item, "LINESTATUS", "3", lineitem_table);
+      }
+
+      if (uid % 2 == 0)
+      {
+         item = add_column_value(item, "RETURNFLAG", "A", lineitem_table);
+      }
+      else 
+      {
+         item = add_column_value(item, "RETURNFLAG", "R", lineitem_table);
       }
       
       item = add_column_value(item, "PARTKEY", DEFAULT_INT_VALUE, lineitem_table);
       item = add_column_value(item, "SUPPKEY", DEFAULT_INT_VALUE, lineitem_table);
-      item = add_column_value(item, "EXTENDEDPRICE", DEFAULT_INT_VALUE, lineitem_table);
+      item = add_column_value(item, "EXTENDEDPRICE", rand_between(1, 2000), lineitem_table);
       item = add_column_value(item, "COMMITDATE", DEFAULT_STRING_VALUE, lineitem_table);
       item = add_column_value(item, "RECEIPTDATE", DEFAULT_STRING_VALUE, lineitem_table);
       item = add_column_value(item, "SHIPINSTRUCT", DEFAULT_STRING_VALUE, lineitem_table);
@@ -698,7 +704,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Rene Howe", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(418)681-5378", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
       else if (uid % NB_CUSTOMER == 1)
@@ -706,7 +712,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Doreen Burns", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(514)552-6526", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
       else if (uid % NB_CUSTOMER == 2)
@@ -714,7 +720,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Billy Park", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(613)524-2588", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
       else if (uid % NB_CUSTOMER == 3)
@@ -722,7 +728,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Ray Audet", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(226)203-7946", customer_table);
          item = add_column_value(item, "NATIONKEY", "CA", customer_table);
       }
       else if (uid % NB_CUSTOMER == 4)
@@ -730,7 +736,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Darcy Lamarre", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(819)728-7047", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
       else if (uid % NB_CUSTOMER == 5)
@@ -738,7 +744,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Victoria Li", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(705)571-3996", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
       else if (uid % NB_CUSTOMER == 6)
@@ -746,7 +752,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Doreen Wiens", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(905)366-4553", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
       else if (uid % NB_CUSTOMER == 7)
@@ -754,7 +760,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Anton McNeil", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(204)382-2614", customer_table);
          item = add_column_value(item, "NATIONKEY", "US", customer_table);
       }
       else if (uid % NB_CUSTOMER == 8)
@@ -762,7 +768,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Faye Hutchinson", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(587)324-5441", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
       else if (uid % NB_CUSTOMER == 9)
@@ -770,7 +776,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Graham Kumar", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(418)387-5161", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
       else if (uid % NB_CUSTOMER == 10)
@@ -778,7 +784,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Rob Meunier", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(780)585-6680", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
       else if (uid % NB_CUSTOMER == 11)
@@ -786,7 +792,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Corey Barr", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(819)383-2600", customer_table);
          item = add_column_value(item, "NATIONKEY", "FR", customer_table);
       }
       else if (uid % NB_CUSTOMER == 12)
@@ -794,7 +800,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Sean Fowler", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(905)315-3888", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
       else if (uid % NB_CUSTOMER == 13)
@@ -802,7 +808,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Morgan Simon", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(705)594-5525", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
       else if (uid % NB_CUSTOMER == 14)
@@ -810,7 +816,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Olive Charbonneau", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(902)265-2507", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
       else if (uid % NB_CUSTOMER == 15)
@@ -818,7 +824,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Graham Major", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(306)279-6029", customer_table);
          item = add_column_value(item, "NATIONKEY", "UK", customer_table);
       }
       else if (uid % NB_CUSTOMER == 16)
@@ -826,7 +832,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Bonnie Lachance", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(418)348-9187", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
       else if (uid % NB_CUSTOMER == 17)
@@ -834,7 +840,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Margaret Wu", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(867)580-5248", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
       else if (uid % NB_CUSTOMER == 18)
@@ -842,7 +848,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "James Baxter", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(604)382-4350", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
       else if (uid % NB_CUSTOMER == 19)
@@ -850,7 +856,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Sarah Doucet", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(416)596-1275", customer_table);
          item = add_column_value(item, "NATIONKEY", "CN", customer_table);
       }
       else if (uid % NB_CUSTOMER == 20)
@@ -858,7 +864,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Janice McGregor", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(780)535-6149", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
       else if (uid % NB_CUSTOMER == 21)
@@ -866,7 +872,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Herb Ford", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(905)847-1235", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
       else if (uid % NB_CUSTOMER == 22)
@@ -874,7 +880,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Cory McMillan", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(902)569-8853", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
       else if (uid % NB_CUSTOMER == 23)
@@ -882,7 +888,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
          item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
          item = add_column_value(item, "NAME", "Jared Patry", customer_table);
          item = add_column_value(item, "ADDRESS", DEFAULT_STRING_VALUE, customer_table);
-         item = add_column_value(item, "PHONE", DEFAULT_STRING_VALUE, customer_table);
+         item = add_column_value(item, "PHONE", "(226)494-7698", customer_table);
          item = add_column_value(item, "NATIONKEY", "JP", customer_table);
       }
 
@@ -1125,6 +1131,10 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       {
          table_info = customer_table;
       }
+      else if (strcmp(query->table_name_ptr->name, "nation") == 0)
+      {
+         table_info = nation_table;
+      }
 
       bool valid_conds = true;
       // check if item respect the where condition
@@ -1265,6 +1275,39 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
          }
 
          cur_customer_result_item->item = item;
+      }
+      else if (strcmp(item_table, "nation") == 0) 
+      {
+         char *key_string = get_column_string_value(item, "NATIONKEY", table_info);
+
+         list_node_t* current_field = query->field_ptr;
+         char *value = malloc(1024);
+         while (current_field != NULL)
+         {
+            strcat(value, current_field->val);
+            strcat(value, ": ");
+            strcat(value, get_column_string_value(item, current_field->val, table_info));
+            strcat(value, ", ");
+            
+            current_field = current_field->next;
+         }
+         // printf("%s", value);
+         // printf("\n");
+
+         ht_set(p->map, key_string, value);
+         
+         if (nation_result_list == NULL)
+         {
+            nation_result_list = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            cur_nation_result_item = nation_result_list;
+         }
+         else
+         {
+            cur_nation_result_item->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            cur_nation_result_item = cur_nation_result_item->next;
+         }
+
+         cur_nation_result_item->item = item;
       }
    }
 }
@@ -1408,6 +1451,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          start_index = sql_parser_get_key_customer(customer_table->start_index);
          end_index = sql_parser_get_key_customer(customer_table->end_index);
       }
+      else if (strcmp(query->table_name_ptr->name, "nation") == 0)
+      {
+         start_index = sql_parser_get_key_nation(nation_table->start_index);
+         end_index = sql_parser_get_key_nation(nation_table->end_index);
+      }
 
       _p.scan_cb = start_background_scan(uid, w, q, start_index, end_index);
    
@@ -1460,6 +1508,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             cur1_result_node = customer_result_list;
             table1 = customer_table;
          }
+         else if (strcmp(table1_name, "nation") == 0)
+         {
+            cur1_result_node = nation_result_list;
+            table1 = nation_table;
+         }
 
          hti table1_iterator = ht_iterator(table1->column_map);
          while (ht_next(&table1_iterator)) 
@@ -1489,10 +1542,15 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
                cur2_result_node = orders_result_list;
                table2 = orders_table;
             }
-            else if (strcmp(table1_name, "customer") == 0)
+            else if (strcmp(table2_name, "customer") == 0)
             {
-               cur1_result_node = customer_result_list;
-               table1 = customer_table;
+               cur2_result_node = customer_result_list;
+               table2 = customer_table;
+            }
+            else if (strcmp(table2_name, "nation") == 0)
+            {
+               cur2_result_node = nation_result_list;
+               table2 = nation_table;
             }
 
             if (!added)
@@ -1599,6 +1657,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
       intermediate_table = (table_t *) calloc(1, sizeof(table_t));
       intermediate_table->column_map = ht_create();
    }
+   
 
    condition = origin_query->and_condition_ptr;
    while (condition != NULL)
@@ -1613,11 +1672,13 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          
          char *table2_name = ht_get(table_identifier_to_table_name, comparison_condition->table);
          char *field2_name = (char *) comparison_condition->value;
+         printf("%s_%s = %s_%s\n", table1_name, field1_name, table2_name, field2_name);
 
          sql_result_node_t *cur1_result_node;
          table_t *table1;
          if (outcome_list != NULL && ht_get(outcome_table->column_map, field1_name) != NULL) 
          {
+            // printf("in outcome_table \n");
             cur1_result_node = outcome_list;
             table1 = outcome_table;
          }
@@ -1636,6 +1697,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             cur1_result_node = customer_result_list;
             table1 = customer_table;
          }
+         else if (strcmp(table1_name, "nation") == 0)
+         {
+            cur1_result_node = nation_result_list;
+            table1 = nation_table;
+         }
 
          hti table1_iterator = ht_iterator(table1->column_map);
          while (ht_next(&table1_iterator)) 
@@ -1653,6 +1719,8 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
 
          while (cur1_result_node != NULL)
          {
+            // printf("--------------cur1_result_node---------------\n");
+            // dump_shash(cur1_result_node->item);
             sql_result_node_t *cur2_result_node;
             table_t *table2;
             if (strcmp(table2_name, "lineitem") == 0)
@@ -1669,6 +1737,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             {
                cur2_result_node = customer_result_list;
                table2 = customer_table;
+            }
+            else if (strcmp(table2_name, "nation") == 0)
+            {
+               cur2_result_node = nation_result_list;
+               table2 = nation_table;
             }
             else if (outcome_list != NULL && ht_get(outcome_table->column_map, field2_name) != NULL)
             {
@@ -1764,14 +1837,28 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             cur1_result_node = cur1_result_node->next;
          }
       }
+      
       condition = condition->next_condition;
       if (condition != NULL)
       {
          tmp_column_index = 0;
       }
 
+      if (intermediate_node == NULL) {
+         printf("yes intermediate_node is null\n");
+      }
+      else {
+         printf("yes intermediate_node is not null\n");
+      }
+
       if (intermediate_node != NULL)
       {
+         // hti intermediate_table_iterator = ht_iterator(intermediate_table->column_map);
+         // while (ht_next(&intermediate_table_iterator)) 
+         // {
+         //    printf("%s\n", (char *)intermediate_table_iterator.key);
+         // }
+
          outcome_list = intermediate_node;
          outcome_table = intermediate_table;
 
@@ -1781,6 +1868,13 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          intermediate_table->column_map = ht_create();
       }
    }
+
+   // printf("-----------------------\n");
+   // hti outcome_table_iterator = ht_iterator(outcome_table->column_map);
+   // while (ht_next(&outcome_table_iterator)) 
+   // {
+   //    printf("%s\n", (char *)outcome_table_iterator.key);
+   // }
 
    if (outcome_list == NULL)
    {
@@ -1798,6 +1892,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
       {
          outcome_list = customer_result_list;
          outcome_table = customer_table;
+      }
+      else if (strcmp(origin_query->table_name_ptr->name, "nation") == 0)
+      {
+         outcome_list = nation_result_list;
+         outcome_table = nation_table;
       }
    }
 
