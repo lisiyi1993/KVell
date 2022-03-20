@@ -192,10 +192,11 @@ char *add_column_value(char *item, char *column_name, void *value, table_t *tabl
    }
 }
 
-static char* get_column_string_value(char* item, char* column_name, table_t *table) { 
-   struct column_info *ci = ht_get(table->column_map, column_name);
-   // printf("get_column_string_value\n");
+static char* get_column_string_value(char* item, char* column_name, table_t *table) {
+   // printf("get_column_string_value\n"); 
    // dump_shash(item);
+
+   struct column_info *ci = ht_get(table->column_map, column_name);
    char *tmp = (char *) calloc(1, sizeof(char));
 
    if (ci == NULL)
@@ -945,7 +946,7 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
       if (uid % NB_REGION == 0)
       {
          item = add_column_value(item, "REGIONKEY", "NA", region_table);
-         item = add_column_value(item, "REGIONNAME", "North America", region_table);
+         item = add_column_value(item, "REGIONNAME", "NorthAmerica", region_table);
       }
       else if (uid % NB_REGION == 1)
       {
@@ -1135,6 +1136,10 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
       {
          table_info = nation_table;
       }
+      else if (strcmp(query->table_name_ptr->name, "region") == 0)
+      {
+         table_info = region_table;
+      }
 
       bool valid_conds = true;
       // check if item respect the where condition
@@ -1309,6 +1314,41 @@ static void simple_scan_map(struct slab_callback *cb, void *item) {
 
          cur_nation_result_item->item = item;
       }
+      else if (strcmp(item_table, "region") == 0) 
+      {
+         // printf("-----------------------------------\n");
+         // dump_shash(item);
+         char *key_string = get_column_string_value(item, "REGIONKEY", table_info);
+
+         list_node_t* current_field = query->field_ptr;
+         char *value = malloc(1024);
+         while (current_field != NULL)
+         {
+            strcat(value, current_field->val);
+            strcat(value, ": ");
+            strcat(value, get_column_string_value(item, current_field->val, table_info));
+            strcat(value, ", ");
+            
+            current_field = current_field->next;
+         }
+         // printf("%s", value);
+         // printf("\n");
+
+         ht_set(p->map, key_string, value);
+         
+         if (region_result_list == NULL)
+         {
+            region_result_list = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            cur_region_result_item = region_result_list;
+         }
+         else
+         {
+            cur_region_result_item->next = (sql_result_node_t *) calloc(1, sizeof(sql_result_node_t));
+            cur_region_result_item = cur_region_result_item->next;
+         }
+
+         cur_region_result_item->item = item;
+      }
    }
 }
 
@@ -1456,6 +1496,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          start_index = sql_parser_get_key_nation(nation_table->start_index);
          end_index = sql_parser_get_key_nation(nation_table->end_index);
       }
+      else if (strcmp(query->table_name_ptr->name, "region") == 0)
+      {
+         start_index = sql_parser_get_key_region(region_table->start_index);
+         end_index = sql_parser_get_key_region(region_table->end_index);
+      }
 
       _p.scan_cb = start_background_scan(uid, w, q, start_index, end_index);
    
@@ -1513,6 +1558,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             cur1_result_node = nation_result_list;
             table1 = nation_table;
          }
+         else if (strcmp(table1_name, "region") == 0)
+         {
+            cur1_result_node = region_result_list;
+            table1 = region_table;
+         }
 
          hti table1_iterator = ht_iterator(table1->column_map);
          while (ht_next(&table1_iterator)) 
@@ -1551,6 +1601,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             {
                cur2_result_node = nation_result_list;
                table2 = nation_table;
+            }
+            else if (strcmp(table2_name, "region") == 0)
+            {
+               cur2_result_node = region_result_list;
+               table2 = region_table;
             }
 
             if (!added)
@@ -1702,6 +1757,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             cur1_result_node = nation_result_list;
             table1 = nation_table;
          }
+         else if (strcmp(table1_name, "region") == 0)
+         {
+            cur1_result_node = region_result_list;
+            table1 = region_table;
+         }
 
          hti table1_iterator = ht_iterator(table1->column_map);
          while (ht_next(&table1_iterator)) 
@@ -1742,6 +1802,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             {
                cur2_result_node = nation_result_list;
                table2 = nation_table;
+            }
+            else if (strcmp(table2_name, "region") == 0)
+            {
+               cur2_result_node = region_result_list;
+               table2 = region_table;
             }
             else if (outcome_list != NULL && ht_get(outcome_table->column_map, field2_name) != NULL)
             {
@@ -1898,6 +1963,11 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          outcome_list = nation_result_list;
          outcome_table = nation_table;
       }
+      else if (strcmp(origin_query->table_name_ptr->name, "nation") == 0)
+      {
+         outcome_list = region_result_list;
+         outcome_table = region_table;
+      }
    }
 
    printf("final outcome\n");
@@ -1939,7 +2009,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
             asprintf(&group_by_key, "%s_%s", group_by_key, get_column_string_value(cur_outcome_node->item, cur_group_by_column->val, outcome_table));
             cur_group_by_column = cur_group_by_column->next;
          }
-
+         
          group_by_t *group_by_result = (group_by_t *) ht_get(group_by_result_map, group_by_key);
          if (group_by_result == NULL)
          {
@@ -1956,6 +2026,7 @@ static void _launch_sql_parser(struct workload *w, int test, int nb_requests, in
          cur_outcome_node = cur_outcome_node->next;
       }
 
+      // for debugging
       // hashset_itr_t group_by_key_set_iterator = hashset_iterator(group_by_key_set);
       // while (hashset_iterator_has_next(group_by_key_set_iterator))
       // {
