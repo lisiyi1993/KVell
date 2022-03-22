@@ -589,6 +589,103 @@ static char *sql_parser_tmp(uint64_t uid) {
    return item;
 }
 
+char *sql_parser_add_lineitem(uint64_t uid) {
+   char *item = sql_parser_lineitem(uid);
+
+   item = add_column_value(item, "TABLE", "lineitem", lineitem_table);
+   item = add_column_value(item, "ORDERKEY", rand_between(0, NB_ORDERS), lineitem_table);
+   item = add_column_value(item, "LINENUMBER", uid & NB_LINEITEMS, lineitem_table);
+   item = add_column_value(item, "QUANTITY", rand_between(1, 100), lineitem_table);
+   item = add_column_value(item, "DISCOUNT", rand_between(100, 999), lineitem_table);
+   item = add_column_value(item, "TAX", rand_between(1, 30), lineitem_table);
+
+   if (uid % 3 == 0) {
+      item = add_column_value(item, "SHIPDATE", "2021-09-03", lineitem_table);
+      item = add_column_value(item, "LINESTATUS", "1", lineitem_table);
+   }
+   else if (uid % 3 == 1) {
+      item = add_column_value(item, "SHIPDATE", "2021-09-04", lineitem_table);
+      item = add_column_value(item, "LINESTATUS", "2", lineitem_table);
+   }
+   else {
+      item = add_column_value(item, "SHIPDATE", "2021-11-05", lineitem_table);
+      item = add_column_value(item, "LINESTATUS", "3", lineitem_table);
+   }
+
+   if (uid % 2 == 0)
+   {
+      item = add_column_value(item, "RETURNFLAG", "A", lineitem_table);
+   }
+   else 
+   {
+      item = add_column_value(item, "RETURNFLAG", "R", lineitem_table);
+   }
+   
+   item = add_column_value(item, "PARTKEY", DEFAULT_INT_VALUE, lineitem_table);
+   item = add_column_value(item, "SUPPKEY", DEFAULT_INT_VALUE, lineitem_table);
+   item = add_column_value(item, "EXTENDEDPRICE", rand_between(1, 2000), lineitem_table);
+   item = add_column_value(item, "COMMITDATE", DEFAULT_STRING_VALUE, lineitem_table);
+   item = add_column_value(item, "RECEIPTDATE", DEFAULT_STRING_VALUE, lineitem_table);
+   item = add_column_value(item, "SHIPINSTRUCT", DEFAULT_STRING_VALUE, lineitem_table);
+   item = add_column_value(item, "SHIPMODE", DEFAULT_STRING_VALUE, lineitem_table);
+   item = add_column_value(item, "COMMENT", DEFAULT_STRING_VALUE, lineitem_table);
+
+   return item;
+}
+
+char *sql_parser_add_order(uint64_t uid, char *order_date) {
+   char *item = sql_parser_order(uid);
+   item = add_column_value(item, "TABLE", "orders", orders_table);
+   item = add_column_value(item, "ORDERKEY", uid % NB_ORDERS, orders_table);
+   item = add_column_value(item, "CUSTKEY", rand_between(0, NB_CUSTOMER), orders_table);
+   item = add_column_value(item, "ORDERSTATUS", DEFAULT_STRING_VALUE, orders_table);
+   item = add_column_value(item, "TOTALPRICE", DEFAULT_INT_VALUE, orders_table);
+   item = add_column_value(item, "ORDERPRIORITY", DEFAULT_STRING_VALUE, orders_table);
+   item = add_column_value(item, "CLERK", DEFAULT_STRING_VALUE, orders_table);
+   item = add_column_value(item, "SHIPPRIORITY", rand_between(1, 5), orders_table);
+   item = add_column_value(item, "ORDERDATE", order_date, orders_table);
+
+   return item;
+}
+
+char *sql_parser_add_customer(uint64_t uid, char *name, char *address, char *phone, char *nation_key) 
+{
+   char *item = sql_parser_customer(uid);
+
+   item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
+   item = add_column_value(item, "TABLE", "customer", customer_table);
+   item = add_column_value(item, "ACCTBAL", DEFAULT_STRING_VALUE, customer_table);
+   item = add_column_value(item, "MKTSEGMENT", DEFAULT_STRING_VALUE, customer_table);
+   item = add_column_value(item, "NAME", name, customer_table);
+   item = add_column_value(item, "ADDRESS", address, customer_table);
+   item = add_column_value(item, "PHONE", phone, customer_table);
+   item = add_column_value(item, "NATIONKEY", nation_key, customer_table);
+
+   return item;
+}
+
+char *sql_parser_add_nation(uint64_t uid, char *nation_key, char *nation_name, char *region_key)
+{
+   char *item = sql_parser_nation(uid);
+   item = add_column_value(item, "TABLE", "nation", nation_table);
+   item = add_column_value(item, "NATIONKEY", nation_key, nation_table);
+   item = add_column_value(item, "NATIONNAME", nation_name, nation_table);
+   item = add_column_value(item, "REGIONKEY", region_key, nation_table);
+
+   return item;
+}
+
+char *sql_parser_add_region(uint64_t uid, char *region_key, char *region_name)
+{
+   char *item = sql_parser_region(uid);
+   item = add_column_value(item, "TABLE", "region", region_table);
+   item = add_column_value(item, "REGIONKEY", region_key, region_table);
+   item = add_column_value(item, "REGIONNAME", region_name, region_table);
+
+   return item;
+}
+
+
 /*
  * Function called by the workload-common interface. uid goes from 0 to the number of elements in the DB.
  */
@@ -600,366 +697,183 @@ static char* create_unique_item_sql_parser(uint64_t uid, uint64_t max_uid) {
 
    if (uid < NB_LINEITEMS) 
    {
-      char *item = sql_parser_lineitem(uid);
-
-      item = add_column_value(item, "TABLE", "lineitem", lineitem_table);
-      item = add_column_value(item, "ORDERKEY", rand_between(0, NB_ORDERS), lineitem_table);
-      item = add_column_value(item, "LINENUMBER", uid & NB_LINEITEMS, lineitem_table);
-      item = add_column_value(item, "QUANTITY", rand_between(1, 100), lineitem_table);
-      item = add_column_value(item, "DISCOUNT", rand_between(100, 999), lineitem_table);
-      item = add_column_value(item, "TAX", rand_between(1, 30), lineitem_table);
-
-      if (uid % 3 == 0) {
-         item = add_column_value(item, "SHIPDATE", "2021-09-03", lineitem_table);
-         item = add_column_value(item, "LINESTATUS", "1", lineitem_table);
-      }
-      else if (uid % 3 == 1) {
-         item = add_column_value(item, "SHIPDATE", "2021-09-04", lineitem_table);
-         item = add_column_value(item, "LINESTATUS", "2", lineitem_table);
-      }
-      else {
-         item = add_column_value(item, "SHIPDATE", "2021-11-05", lineitem_table);
-         item = add_column_value(item, "LINESTATUS", "3", lineitem_table);
-      }
-
-      if (uid % 2 == 0)
-      {
-         item = add_column_value(item, "RETURNFLAG", "A", lineitem_table);
-      }
-      else 
-      {
-         item = add_column_value(item, "RETURNFLAG", "R", lineitem_table);
-      }
-      
-      item = add_column_value(item, "PARTKEY", DEFAULT_INT_VALUE, lineitem_table);
-      item = add_column_value(item, "SUPPKEY", DEFAULT_INT_VALUE, lineitem_table);
-      item = add_column_value(item, "EXTENDEDPRICE", rand_between(1, 2000), lineitem_table);
-      item = add_column_value(item, "COMMITDATE", DEFAULT_STRING_VALUE, lineitem_table);
-      item = add_column_value(item, "RECEIPTDATE", DEFAULT_STRING_VALUE, lineitem_table);
-      item = add_column_value(item, "SHIPINSTRUCT", DEFAULT_STRING_VALUE, lineitem_table);
-      item = add_column_value(item, "SHIPMODE", DEFAULT_STRING_VALUE, lineitem_table);
-      item = add_column_value(item, "COMMENT", DEFAULT_STRING_VALUE, lineitem_table);
-      // dump_shash(item);
-      return item;
-      // return sql_parser_lineitem(uid);
+      return sql_parser_add_lineitem(uid);
    }
    else if (NB_LINEITEMS <= uid && uid < NB_LINEITEMS + NB_ORDERS)
    {
-      // char *item = sql_parser_lineitem(uid);
-      char *item = sql_parser_order(uid);
-      item = add_column_value(item, "TABLE", "orders", orders_table);
-      item = add_column_value(item, "ORDERKEY", uid % NB_ORDERS, orders_table);
-      item = add_column_value(item, "CUSTKEY", rand_between(0, NB_CUSTOMER), orders_table);
-      item = add_column_value(item, "ORDERSTATUS", DEFAULT_STRING_VALUE, orders_table);
-      item = add_column_value(item, "TOTALPRICE", DEFAULT_INT_VALUE, orders_table);
-      // item = add_column_value(item, "ORDERDATE", "1998-08-01", orders_table);
-      item = add_column_value(item, "ORDERPRIORITY", DEFAULT_STRING_VALUE, orders_table);
-      item = add_column_value(item, "CLERK", DEFAULT_STRING_VALUE, orders_table);
-      item = add_column_value(item, "SHIPPRIORITY", rand_between(1, 5), orders_table);
-
       if (uid % 8 == 0) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-01-01", orders_table);
+         return sql_parser_add_order(uid, "2021-01-01");
       }
       else if (uid % 8 == 1) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-02-02", orders_table);
+         return sql_parser_add_order(uid, "2021-02-02");
       }
       else if (uid % 8 == 2) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-03-03", orders_table);
+         return sql_parser_add_order(uid, "2021-03-03");
       }
       else if (uid % 8 == 3) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-04-04", orders_table);
+         return sql_parser_add_order(uid, "2021-04-04");
       }
       else if (uid % 8 == 4) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-05-05", orders_table);
+         return sql_parser_add_order(uid, "2021-05-05");
       }
       else if (uid % 8 == 5) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-06-16", orders_table);
+         return sql_parser_add_order(uid, "2021-06-16");
       }
       else if (uid % 8 == 6) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-07-17", orders_table);
+         return sql_parser_add_order(uid, "2021-07-17");
       }
       else if (uid % 8 == 7) 
       {
-         item = add_column_value(item, "ORDERDATE", "2021-08-08", orders_table);
+         return sql_parser_add_order(uid, "2021-08-08");
       }
-
-      // dump_shash(item);
-      return item;
    }
    else if (NB_LINEITEMS + NB_ORDERS <= uid && uid < NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER)
-   {
-      char *item = sql_parser_customer(uid);
-      item = add_column_value(item, "TABLE", "customer", customer_table);
-      item = add_column_value(item, "ACCTBAL", DEFAULT_STRING_VALUE, customer_table);
-      item = add_column_value(item, "MKTSEGMENT", DEFAULT_STRING_VALUE, customer_table);
-      
+   {  
       if (uid % NB_CUSTOMER == 0)
-      {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Rene Howe", customer_table);
-         item = add_column_value(item, "ADDRESS", "3242 Goldcliff Circle", customer_table);
-         item = add_column_value(item, "PHONE", "(418)681-5378", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CA", customer_table);
+      {         
+         return sql_parser_add_customer(uid, "Rene Howe", "3242 Goldcliff Circle", "(418)681-5378", "CA");
       }
       else if (uid % NB_CUSTOMER == 1)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Doreen Burns", customer_table);
-         item = add_column_value(item, "ADDRESS", "642 Arbor Court", customer_table);
-         item = add_column_value(item, "PHONE", "(514)552-6526", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CA", customer_table);
+         return sql_parser_add_customer(uid, "Doreen Burns", "642 Arbor Court", "(514)552-6526", "CA");
       }
       else if (uid % NB_CUSTOMER == 2)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Billy Park", customer_table);
-         item = add_column_value(item, "ADDRESS", "1866 Wright Court", customer_table);
-         item = add_column_value(item, "PHONE", "(613)524-2588", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CA", customer_table);
+         return sql_parser_add_customer(uid, "Billy Park", "1866 Wright Court", "(613)524-2588", "CA");
       }
       else if (uid % NB_CUSTOMER == 3)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Ray Audet", customer_table);
-         item = add_column_value(item, "ADDRESS", "1085 Par Drive", customer_table);
-         item = add_column_value(item, "PHONE", "(226)203-7946", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CA", customer_table);
+         return sql_parser_add_customer(uid, "Ray Audet", "1085 Par Drive", "(226)203-7946", "CA");
       }
       else if (uid % NB_CUSTOMER == 4)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Darcy Lamarre", customer_table);
-         item = add_column_value(item, "ADDRESS", "2910 State Street", customer_table);
-         item = add_column_value(item, "PHONE", "(819)728-7047", customer_table);
-         item = add_column_value(item, "NATIONKEY", "US", customer_table);
+         return sql_parser_add_customer(uid, "Darcy Lamarre", "2910 State Street", "(819)728-7047", "US");
       }
       else if (uid % NB_CUSTOMER == 5)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Victoria Li", customer_table);
-         item = add_column_value(item, "ADDRESS", "1478 Peck Street", customer_table);
-         item = add_column_value(item, "PHONE", "(705)571-3996", customer_table);
-         item = add_column_value(item, "NATIONKEY", "US", customer_table);
+         return sql_parser_add_customer(uid, "Victoria Li", "1478 Peck Street", "(705)571-3996",  "US");
       }
       else if (uid % NB_CUSTOMER == 6)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Doreen Wiens", customer_table);
-         item = add_column_value(item, "ADDRESS", "3523 August Lane", customer_table);
-         item = add_column_value(item, "PHONE", "(905)366-4553", customer_table);
-         item = add_column_value(item, "NATIONKEY", "US", customer_table);
+         return sql_parser_add_customer(uid, "Doreen Wiens",  "3523 August Lane", "(905)366-4553", "US");
       }
       else if (uid % NB_CUSTOMER == 7)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Anton McNeil", customer_table);
-         item = add_column_value(item, "ADDRESS", "1723 Murphy Court", customer_table);
-         item = add_column_value(item, "PHONE", "(204)382-2614", customer_table);
-         item = add_column_value(item, "NATIONKEY", "US", customer_table);
+         return sql_parser_add_customer(uid, "Anton McNeil", "1723 Murphy Court", "(204)382-2614", "US");
       }
       else if (uid % NB_CUSTOMER == 8)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Faye Hutchinson", customer_table);
-         item = add_column_value(item, "ADDRESS", "3018 Duke Lane", customer_table);
-         item = add_column_value(item, "PHONE", "(587)324-5441", customer_table);
-         item = add_column_value(item, "NATIONKEY", "FR", customer_table);
+         return sql_parser_add_customer(uid, "Faye Hutchinson", "3018 Duke Lane", "(587)324-5441", "FR");
       }
       else if (uid % NB_CUSTOMER == 9)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Graham Kumar", customer_table);
-         item = add_column_value(item, "ADDRESS", "3637 Liberty Street", customer_table);
-         item = add_column_value(item, "PHONE", "(418)387-5161", customer_table);
-         item = add_column_value(item, "NATIONKEY", "FR", customer_table);
+         return sql_parser_add_customer(uid, "Graham Kumar", "3637 Liberty Street", "(418)387-5161", "FR");
       }
       else if (uid % NB_CUSTOMER == 10)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Rob Meunier", customer_table);
-         item = add_column_value(item, "ADDRESS", "2707 Webster Street", customer_table);
-         item = add_column_value(item, "PHONE", "(780)585-6680", customer_table);
-         item = add_column_value(item, "NATIONKEY", "FR", customer_table);
+         return sql_parser_add_customer(uid, "Rob Meunier", "2707 Webster Street", "(780)585-6680", "FR");
       }
       else if (uid % NB_CUSTOMER == 11)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Corey Barr", customer_table);
-         item = add_column_value(item, "ADDRESS", "3762 Emma Street", customer_table);
-         item = add_column_value(item, "PHONE", "(819)383-2600", customer_table);
-         item = add_column_value(item, "NATIONKEY", "FR", customer_table);
+         return sql_parser_add_customer(uid, "Corey Barr", "3762 Emma Street", "(819)383-2600", "FR");
       }
       else if (uid % NB_CUSTOMER == 12)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Sean Fowler", customer_table);
-         item = add_column_value(item, "ADDRESS", "1521 Colonial Drive", customer_table);
-         item = add_column_value(item, "PHONE", "(905)315-3888", customer_table);
-         item = add_column_value(item, "NATIONKEY", "UK", customer_table);
+         return sql_parser_add_customer(uid, "Sean Fowler", "1521 Colonial Drive", "(905)315-3888", "UK");
       }
       else if (uid % NB_CUSTOMER == 13)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Morgan Simon", customer_table);
-         item = add_column_value(item, "ADDRESS", "64 Straford Park", customer_table);
-         item = add_column_value(item, "PHONE", "(705)594-5525", customer_table);
-         item = add_column_value(item, "NATIONKEY", "UK", customer_table);
+         return sql_parser_add_customer(uid, "Morgan Simon", "64 Straford Park", "(705)594-5525", "UK");
       }
       else if (uid % NB_CUSTOMER == 14)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Olive Charbonneau", customer_table);
-         item = add_column_value(item, "ADDRESS", "593 Carriage Court", customer_table);
-         item = add_column_value(item, "PHONE", "(902)265-2507", customer_table);
-         item = add_column_value(item, "NATIONKEY", "UK", customer_table);
+         return sql_parser_add_customer(uid, "Olive Charbonneau", "593 Carriage Court", "(902)265-2507", "UK");
       }
       else if (uid % NB_CUSTOMER == 15)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Graham Major", customer_table);
-         item = add_column_value(item, "ADDRESS", "2418 McVaney Road", customer_table);
-         item = add_column_value(item, "PHONE", "(306)279-6029", customer_table);
-         item = add_column_value(item, "NATIONKEY", "UK", customer_table);
+         return sql_parser_add_customer(uid, "Graham Major", "2418 McVaney Road", "(306)279-6029", "UK");
       }
       else if (uid % NB_CUSTOMER == 16)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Bonnie Lachance", customer_table);
-         item = add_column_value(item, "ADDRESS", "3304 Maple Court", customer_table);
-         item = add_column_value(item, "PHONE", "(418)348-9187", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CN", customer_table);
+         return sql_parser_add_customer(uid, "Bonnie Lachance", "3304 Maple Court", "(418)348-9187", "CN");
       }
       else if (uid % NB_CUSTOMER == 17)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Margaret Wu", customer_table);
-         item = add_column_value(item, "ADDRESS", "3353 Church Street", customer_table);
-         item = add_column_value(item, "PHONE", "(867)580-5248", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CN", customer_table);
+         return sql_parser_add_customer(uid, "Margaret Wu", "3353 Church Street", "(867)580-5248", "CN");
       }
       else if (uid % NB_CUSTOMER == 18)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "James Baxter", customer_table);
-         item = add_column_value(item, "ADDRESS", "1893 Jennifer Lane", customer_table);
-         item = add_column_value(item, "PHONE", "(604)382-4350", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CN", customer_table);
+         return sql_parser_add_customer(uid, "James Baxter", "1893 Jennifer Lane", "(604)382-4350", "CN");
       }
       else if (uid % NB_CUSTOMER == 19)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Sarah Doucet", customer_table);
-         item = add_column_value(item, "ADDRESS", "2514 Rinehart Road", customer_table);
-         item = add_column_value(item, "PHONE", "(416)596-1275", customer_table);
-         item = add_column_value(item, "NATIONKEY", "CN", customer_table);
+         return sql_parser_add_customer(uid, "Sarah Doucet", "2514 Rinehart Road", "(416)596-1275", "CN");
       }
       else if (uid % NB_CUSTOMER == 20)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Janice McGregor", customer_table);
-         item = add_column_value(item, "ADDRESS", "4887 Red Bud Lane", customer_table);
-         item = add_column_value(item, "PHONE", "(780)535-6149", customer_table);
-         item = add_column_value(item, "NATIONKEY", "JP", customer_table);
+         return sql_parser_add_customer(uid, "Janice McGregor", "4887 Red Bud Lane", "(780)535-6149", "JP");
       }
       else if (uid % NB_CUSTOMER == 21)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Herb Ford", customer_table);
-         item = add_column_value(item, "ADDRESS", "3978 Quilly Lane", customer_table);
-         item = add_column_value(item, "PHONE", "(905)847-1235", customer_table);
-         item = add_column_value(item, "NATIONKEY", "JP", customer_table);
+         return sql_parser_add_customer(uid, "Herb Ford", "3978 Quilly Lane", "(905)847-1235", "JP");
       }
       else if (uid % NB_CUSTOMER == 22)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Cory McMillan", customer_table);
-         item = add_column_value(item, "ADDRESS", "3675 Cedar Lane", customer_table);
-         item = add_column_value(item, "PHONE", "(902)569-8853", customer_table);
-         item = add_column_value(item, "NATIONKEY", "JP", customer_table);
+         return sql_parser_add_customer(uid, "Cory McMillan", "3675 Cedar Lane", "(902)569-8853", "JP");
       }
       else if (uid % NB_CUSTOMER == 23)
       {
-         item = add_column_value(item, "CUSTKEY", uid % NB_CUSTOMER, customer_table);
-         item = add_column_value(item, "NAME", "Jared Patry", customer_table);
-         item = add_column_value(item, "ADDRESS", "2764 Harter Street", customer_table);
-         item = add_column_value(item, "PHONE", "(226)494-7698", customer_table);
-         item = add_column_value(item, "NATIONKEY", "JP", customer_table);
+         return sql_parser_add_customer(uid, "Jared Patry", "2764 Harter Street", "(226)494-7698", "JP");
       }
-
-      return item;
    }
    else if (NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER <= uid && uid < NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER + NB_NATION) 
    {
-      char *item = sql_parser_nation(uid);
-      item = add_column_value(item, "TABLE", "nation", nation_table);
-
       if (uid % NB_NATION == 0)
       {
-         item = add_column_value(item, "NATIONKEY", "CA", nation_table);
-         item = add_column_value(item, "NATIONNAME", "Canada", nation_table);
-         item = add_column_value(item, "REGIONKEY", "NA", nation_table);
+         return sql_parser_add_nation(uid, "CA", "Canada", "NA");
       }
       else if (uid % NB_NATION == 1)
       {
-         item = add_column_value(item, "NATIONKEY", "US", nation_table);
-         item = add_column_value(item, "NATIONNAME", "United States", nation_table);
-         item = add_column_value(item, "REGIONKEY", "NA", nation_table);
+         return sql_parser_add_nation(uid, "US", "United States", "NA"); 
       }
       else if (uid % NB_NATION == 2)
       {
-         item = add_column_value(item, "NATIONKEY", "FR", nation_table);
-         item = add_column_value(item, "NATIONNAME", "France", nation_table);
-         item = add_column_value(item, "REGIONKEY", "EU", nation_table);
+         return sql_parser_add_nation(uid, "FR", "France", "EU");
       }
       else if (uid % NB_NATION == 3)
       {
-         item = add_column_value(item, "NATIONKEY", "UK", nation_table);
-         item = add_column_value(item, "NATIONNAME", "United Kingdom", nation_table);
-         item = add_column_value(item, "REGIONKEY", "EU", nation_table);
+         return sql_parser_add_nation(uid, "UK", "United Kingdom", "EU");
       }
       else if (uid % NB_NATION == 4)
       {
-         item = add_column_value(item, "NATIONKEY", "CN", nation_table);
-         item = add_column_value(item, "NATIONNAME", "China", nation_table);
-         item = add_column_value(item, "REGIONKEY", "AS", nation_table);
+         return sql_parser_add_nation(uid, "CN", "China", "AS");
       }
       else if (uid % NB_NATION == 5)
       {
-         item = add_column_value(item, "NATIONKEY", "JP", nation_table);
-         item = add_column_value(item, "NATIONNAME", "Japan", nation_table);
-         item = add_column_value(item, "REGIONKEY", "AS", nation_table);
+         return sql_parser_add_nation(uid, "JP", "Japan", "AS");
       }
-
-      return item;
    }
    else if (NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER + NB_NATION <= uid && uid < NB_LINEITEMS + NB_ORDERS + NB_CUSTOMER + NB_NATION + NB_REGION)
    {
-      char *item = sql_parser_region(uid);
-      item = add_column_value(item, "TABLE", "region", region_table);
       if (uid % NB_REGION == 0)
       {
-         item = add_column_value(item, "REGIONKEY", "NA", region_table);
-         item = add_column_value(item, "REGIONNAME", "NorthAmerica", region_table);
+         return sql_parser_add_region(uid, "NA", "NorthAmerica");
       }
       else if (uid % NB_REGION == 1)
       {
-         item = add_column_value(item, "REGIONKEY", "EU", region_table);
-         item = add_column_value(item, "REGIONNAME", "Europe", region_table);
+         return sql_parser_add_region(uid, "EU", "Europe");
       }
       else if (uid % NB_REGION == 2)
       {
-         item = add_column_value(item, "REGIONKEY", "AS", region_table);
-         item = add_column_value(item, "REGIONNAME", "Asia", region_table);
+         return sql_parser_add_region(uid, "AS", "Asia");
       }
-
-      return item;
    }
 
    printf("return null\n");
