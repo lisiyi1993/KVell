@@ -2346,6 +2346,7 @@ typedef enum state
    stepSelectFrom,
    stepSelectComma,
    stepSelectFromTable,
+   stepSelectFromTableComma,
    stepWhere,
    stepWhereField,
    stepWhereOperator,
@@ -2569,14 +2570,19 @@ void parse_sql(char *input_sql) {
                }
                else if (strcmp(ptr, ",") == 0)
                {
-                  current_table_name->next_table = (table_name_t *) calloc(1, sizeof(table_name_t));
-                  current_table_name = current_table_name->next_table;
-
-                  ptr = strtok(NULL, delim);
-                  step = stepSelectFromTable;
+                  step = stepSelectFromTableComma;
                }
             }
 
+            break;
+         }
+         case stepSelectFromTableComma:
+         {
+            current_table_name->next_table = (table_name_t *) calloc(1, sizeof(table_name_t));
+            current_table_name = current_table_name->next_table;
+
+            ptr = strtok(NULL, delim);
+            step = stepSelectFromTable;
             break;
          }
          case stepWhere: 
@@ -2938,6 +2944,17 @@ void parse_sql(char *input_sql) {
                      query->group_by_ptr = (group_by_node_t *) calloc(1, sizeof(group_by_node_t));
                      current_group_by_ptr = query->group_by_ptr;
                      step = stepGroupBy;
+                  }
+               }
+               else if (strcmp(ptr, "ORDER") == 0)
+               {
+                  ptr = strtok(NULL, delim);
+                  if (strcmp(ptr, "BY") == 0) 
+                  {
+                     ptr = strtok(NULL, delim);
+                     query->order_by_ptr = (order_by_node_t *) calloc(1, sizeof(order_by_node_t));
+                     current_order_by_ptr = query->group_by_ptr;
+                     step = stepOrderBy;
                   }
                }
                break;
@@ -3371,7 +3388,7 @@ void print_query_object(query_t *query)
    printf("\n");
 
    table_name_t *current_table_name = query->table_name_ptr;
-   printf("The tablename are ");
+   printf("The tables are ");
    while (current_table_name != NULL) {
       printf("\"%s (%s)\", ", current_table_name->name, current_table_name->identifier);
       current_table_name = current_table_name->next_table;

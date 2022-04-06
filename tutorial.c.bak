@@ -86,11 +86,11 @@ int main(int argc, char **argv) {
    create_region_table(sizeof(region_columns)/100, region_columns, region_columns_type);
 
    // char input_sql[] = "SELECT QUANTITY , TAX , DISCOUNT , RETURNFLAG , SHIPDATE FROM table WHERE SHIPDATE LIKE '1998%' AND DISCOUNT BETWEEN 0 AND 0 + 500";
-   // char input_sql[] = "SELECT l_ORDERKEY , l_TAX , l_DISCOUNT , l_RETURNFLAG , l_SHIPDATE FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY";
+   // char input_sql[] = "SELECT l_ORDERKEY , l_TAX , l_DISCOUNT , l_RETURNFLAG , l_SHIPDATE FROM lineitem WHERE l_DISCOUNT < 0.5 AND l_SHIPDATE > 2021-09-03";
 
-   // char input_sql[] = "SELECT l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY , SUM(l_TAX) AS revenue FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY AND l_SHIPDATE > 2021-09-03 AND o_ORDERDATE < 2021-11-05 GROUP BY l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY ORDER BY revenue DESC , o_ORDERDATE";
+   char input_sql[] = "SELECT l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY , SUM(l_TAX) AS revenue FROM lineitem , orders , customer WHERE o_ORDERKEY = l_ORDERKEY AND o_CUSTKEY = c_CUSTKEY AND l_SHIPDATE > 2021-09-03 AND o_ORDERDATE < 2021-11-05 GROUP BY l_ORDERKEY , o_ORDERDATE , o_SHIPPRIORITY ORDER BY revenue DESC , o_ORDERDATE";
    // char input_sql[] = "SELECT c_CUSTKEY , c_NAME , c_ADDRESS , c_PHONE , n_NATIONNAME , SUM(l_EXTENDEDPRICE) AS revenue FROM customer , orders , lineitem , nation WHERE c_CUSTKEY = o_CUSTKEY AND o_ORDERKEY = l_ORDERKEY AND o_ORDERDATE >= 2021-03-01 AND o_ORDERDATE < 2021-06-01 AND l_RETURNFLAG = R AND c_NATIONKEY = n_NATIONKEY GROUP BY c_CUSTKEY , c_NAME , c_PHONE , c_ADDRESS , n_NATIONNAME ORDER BY revenue DESC";
-   char input_sql[] = "SELECT n_NATIONKEY , n_NATIONNAME , SUM(l_EXTENDEDPRICE) AS revenue FROM customer , orders , lineitem , nation , region WHERE c_CUSTKEY = o_CUSTKEY AND o_ORDERKEY = l_ORDERKEY AND o_ORDERDATE >= 2021-03-01 AND o_ORDERDATE < 2021-06-01 AND c_NATIONKEY = n_NATIONKEY AND n_REGIONKEY = r_REGIONKEY AND r_REGIONNAME = Europe GROUP BY n_NATIONNAME ORDER BY revenue DESC";
+   // char input_sql[] = "SELECT n_NATIONKEY , n_NATIONNAME , SUM(l_EXTENDEDPRICE) AS revenue FROM customer , orders , lineitem , nation , region WHERE c_CUSTKEY = o_CUSTKEY AND o_ORDERKEY = l_ORDERKEY AND o_ORDERDATE >= 2021-03-01 AND o_ORDERDATE < 2021-06-01 AND c_NATIONKEY = n_NATIONKEY AND n_REGIONKEY = r_REGIONKEY AND r_REGIONNAME = Europe GROUP BY n_NATIONNAME ORDER BY revenue DESC";
    
    // parse_sql(input_sql);
 
